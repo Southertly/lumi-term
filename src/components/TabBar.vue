@@ -13,7 +13,6 @@ interface DragState {
   currentX: number;
 }
 
-// @ts-expect-error - Will be used in subsequent drag handler tasks
 const dragState = ref<DragState | null>(null);
 
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
@@ -47,6 +46,26 @@ function closeTab(e: MouseEvent, tabId: string) {
       }, 100);
     }
   }
+}
+
+// @ts-expect-error - Will be used in subsequent drag handler tasks
+function handlePointerDown(e: PointerEvent, tabId: string, index: number) {
+  // Ignore if clicking close button
+  if ((e.target as HTMLElement).closest('.tab-close')) return;
+
+  // Ignore if only one tab
+  if (store.tabs.length < 2) return;
+
+  const target = e.currentTarget as HTMLElement;
+  target.setPointerCapture(e.pointerId);
+
+  dragState.value = {
+    draggedTabId: tabId,
+    draggedIndex: index,
+    currentIndex: index,
+    startX: e.clientX,
+    currentX: e.clientX,
+  };
 }
 </script>
 
