@@ -85,7 +85,27 @@ function handlePointerMove(e: PointerEvent) {
     )
   );
 
+  if (newIndex === dragState.value.currentIndex) return;
+
   dragState.value.currentIndex = newIndex;
+  // TODO: Visual feedback applied in Task 6 via getTabStyle computed helper
+}
+
+function handlePointerUp(e: PointerEvent) {
+  if (!dragState.value) return;
+
+  const deltaX = Math.abs(dragState.value.currentX - dragState.value.startX);
+
+  // Only reorder if dragged more than 5px
+  if (deltaX > 5) {
+    store.reorderTabs(dragState.value.draggedIndex, dragState.value.currentIndex);
+  }
+
+  dragState.value = null;
+}
+
+function handlePointerCancel() {
+  dragState.value = null;
 }
 </script>
 
