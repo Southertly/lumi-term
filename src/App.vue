@@ -1,10 +1,30 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 import TabBar from './components/TabBar.vue';
 import TerminalTab from './components/TerminalTab.vue';
 import { useTerminalStore } from './stores/terminalStore';
 
 const store = useTerminalStore();
+
+function closeApp() {
+  invoke('close_app').catch((err) => console.error('[App] close_app failed:', err));
+}
+
+const isMaximized = ref(false);
+
+async function minimizeWindow() {
+  invoke('minimize_window').catch((err) => console.error('[App] minimize_window failed:', err));
+}
+
+async function toggleMaximize() {
+  invoke('toggle_maximize').catch((err) => console.error('[App] toggle_maximize failed:', err));
+}
+
+async function updateMaximizedState() {
+  const { appWindow } = await import('@tauri-apps/api/window');
+  isMaximized.value = await appWindow.isMaximized();
+}
 
 function handleKeydown(e: KeyboardEvent) {
   if (!e.ctrlKey) return;
@@ -18,6 +38,13 @@ function handleKeydown(e: KeyboardEvent) {
       const tab = store.tabs.find((t) => t.id === store.activeTabId);
       if (tab && confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
+        if (store.tabs.length === 0) {
+          setTimeout(() => {
+            import('@tauri-apps/api/core')
+              .then(({ invoke }) => invoke('close_app'))
+              .catch((err) => console.error('[App] close_app failed:', err));
+          }, 100);
+        }
       }
     }
   } else if (e.key === 'Tab') {
@@ -37,9 +64,13 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   store.createTab('powershell');
   window.addEventListener('keydown', handleKeydown);
+
+  const { appWindow } = await import('@tauri-apps/api/window');
+  await updateMaximizedState();
+  appWindow.listen('tauri://resize', updateMaximizedState);
 });
 
 onUnmounted(() => {
@@ -51,6 +82,13 @@ onUnmounted(() => {
   <div class="app-container">
     <div class="titlebar" data-tauri-drag-region>
       <div class="titlebar-title">LumiTerm</div>
+      <div class="window-controls">
+        <button class="control-btn minimize-btn" @click="minimizeWindow">—</button>
+        <button class="control-btn maximize-btn" @click="toggleMaximize">
+          {{ isMaximized ? '❐' : '⬜' }}
+        </button>
+        <button class="control-btn close-btn" @click="closeApp">✕</button>
+      </div>
     </div>
     <TabBar />
     <div class="terminal-wrapper">
@@ -75,9 +113,34 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
 }
 .titlebar {
   height: 32px; background: #181825;
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 0 12px; user-select: none;
 }
 .titlebar-title { font-size: 13px; color: #cdd6f4; font-weight: 500; }
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.control-btn {
+  width: 32px; height: 24px;
+  background: transparent;
+  border: none;
+  color: #cdd6f4;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+.control-btn:hover {
+  background: #313244;
+}
+.close-btn:hover {
+  background: #f38ba8;
+  color: #11111b;
+}
 .terminal-wrapper { flex: 1; overflow: hidden; position: relative; }
 </style>
