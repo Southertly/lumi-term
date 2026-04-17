@@ -29,9 +29,11 @@ function closeTab(e: MouseEvent, tabId: string) {
   if (confirm(`关闭 ${tab.title}？`)) {
     store.removeTab(tabId);
     if (store.tabs.length === 0) {
-      import('@tauri-apps/api/core')
-        .then(({ invoke }) => invoke('close_app'))
-        .catch((err) => console.error('[TabBar] close_app failed:', err));
+      setTimeout(() => {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => invoke('close_app'))
+          .catch((err) => console.error('[TabBar] close_app failed:', err));
+      }, 100);
     }
   }
 }
@@ -83,7 +85,7 @@ function closeTab(e: MouseEvent, tabId: string) {
   gap: 4px;
   border-bottom: 1px solid #11111b;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
 }
 .tab-bar::-webkit-scrollbar { height: 0; }
 
@@ -137,15 +139,15 @@ function closeTab(e: MouseEvent, tabId: string) {
 .new-tab-btn:hover, .new-tab-btn.open { background: #262637; border-color: #45475a; }
 
 .dropdown {
-  position: absolute;
-  top: 36px; left: 0;
+  position: fixed;
+  margin-top: 36px;
   background: #181825;
   border: 1px solid #313244;
   border-radius: 8px;
   overflow: hidden;
   min-width: 160px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  z-index: 100;
+  z-index: 1000;
 }
 .dropdown-item {
   display: flex; align-items: center; gap: 10px;
