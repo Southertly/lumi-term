@@ -37,11 +37,14 @@ pub fn init_pty_store() -> PtyStore {
 
 /// Exits the application. Called by the frontend when the last terminal tab is closed.
 #[tauri::command]
-pub fn close_app(store: State<PtyStore>, app: tauri::AppHandle) {
+pub fn close_app(store: State<PtyStore>, app: tauri::AppHandle) -> Result<(), String> {
     if let Ok(mut s) = store.lock() {
         s.clear();
+    } else {
+        eprintln!("[close_app] Warning: Failed to acquire PTY store lock, skipping cleanup");
     }
     app.exit(0);
+    Ok(())
 }
 
 #[tauri::command]
