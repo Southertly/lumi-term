@@ -53,5 +53,13 @@ export const useTerminalStore = defineStore('terminal', () => {
     }
   }
 
-  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab };
+  function reorderTabs(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= tabs.value.length || toIndex >= tabs.value.length) return;
+
+    const [movedTab] = tabs.value.splice(fromIndex, 1);
+    tabs.value.splice(toIndex, 0, movedTab);
+  }
+
+  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs };
 });
