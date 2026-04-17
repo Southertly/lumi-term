@@ -35,7 +35,23 @@ pub fn init_pty_store() -> PtyStore {
     create_pty_store()
 }
 
+/// Exits the application. Called by the frontend when the last terminal tab is closed.
 #[tauri::command]
-pub fn close_app(app: tauri::AppHandle) {
+pub fn close_app(store: State<PtyStore>, app: tauri::AppHandle) {
+    store.lock().unwrap().clear();
     app.exit(0);
+}
+
+#[tauri::command]
+pub fn minimize_window(window: tauri::Window) {
+    window.minimize().unwrap();
+}
+
+#[tauri::command]
+pub fn toggle_maximize(window: tauri::Window) {
+    if window.is_maximized().unwrap() {
+        window.unmaximize().unwrap();
+    } else {
+        window.maximize().unwrap();
+    }
 }
