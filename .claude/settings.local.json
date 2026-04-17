@@ -35,7 +35,12 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git init *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(cargo tree *)",
+      "Bash(git *)",
+      "mcp__playwright__browser_snapshot",
+      "Bash(taskkill /F /IM tauri-app.exe)",
+      "Bash(netstat -ano)"
     ]
   }
 }

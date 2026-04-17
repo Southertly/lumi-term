@@ -40,6 +40,13 @@ async function init(container: HTMLElement) {
     return;
   }
 
+  terminal.attachCustomKeyEventHandler((e) => {
+    if (e.ctrlKey && (e.key === 'w' || e.key === 't' || e.key === 'Tab')) {
+      return false; // let window keydown handler take it
+    }
+    return true;
+  });
+
   terminal.onData((data) => {
     if (!sessionId) return;
     invoke('write_pty_cmd', {
