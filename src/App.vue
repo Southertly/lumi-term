@@ -7,6 +7,8 @@ import { useTerminalStore } from './stores/terminalStore';
 
 const store = useTerminalStore();
 
+let unlistenResize: (() => void) | null = null;
+
 function closeApp() {
   invoke('close_app').catch((err) => console.error('[App] close_app failed:', err));
 }
@@ -18,7 +20,8 @@ async function minimizeWindow() {
 }
 
 async function toggleMaximize() {
-  invoke('toggle_maximize').catch((err) => console.error('[App] toggle_maximize failed:', err));
+  await invoke('toggle_maximize').catch((err) => console.error('[App] toggle_maximize failed:', err));
+  await updateMaximizedState();
 }
 
 async function updateMaximizedState() {
@@ -39,11 +42,7 @@ function handleKeydown(e: KeyboardEvent) {
       if (tab && confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
         if (store.tabs.length === 0) {
-          setTimeout(() => {
-            import('@tauri-apps/api/core')
-              .then(({ invoke }) => invoke('close_app'))
-              .catch((err) => console.error('[App] close_app failed:', err));
-          }, 100);
+          closeApp();
         }
       }
     }
@@ -70,11 +69,12 @@ onMounted(async () => {
 
   const { appWindow } = await import('@tauri-apps/api/window');
   await updateMaximizedState();
-  appWindow.listen('tauri://resize', updateMaximizedState);
+  unlistenResize = await appWindow.listen('tauri://resize', updateMaximizedState);
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
+  if (unlistenResize) unlistenResize();
 });
 </script>
 
