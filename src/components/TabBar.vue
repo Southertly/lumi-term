@@ -145,7 +145,10 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       v-for="(tab, index) in store.tabs"
       :key="tab.id"
       class="tab"
-      :class="{ active: tab.id === store.activeTabId }"
+      :class="{
+        active: tab.id === store.activeTabId,
+        dragging: dragState?.draggedTabId === tab.id
+      }"
       :style="getTabStyle(tab.id, index)"
       @click="store.switchTab(tab.id)"
       @pointerdown="handlePointerDown($event, tab.id, index)"
