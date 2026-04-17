@@ -67,6 +67,26 @@ function handlePointerDown(e: PointerEvent, tabId: string, index: number) {
     currentX: e.clientX,
   };
 }
+
+// @ts-expect-error - Will be used in subsequent drag handler tasks
+function handlePointerMove(e: PointerEvent) {
+  if (!dragState.value) return;
+
+  dragState.value.currentX = e.clientX;
+
+  const deltaX = dragState.value.currentX - dragState.value.startX;
+  const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
+
+  const newIndex = Math.max(
+    0,
+    Math.min(
+      store.tabs.length - 1,
+      dragState.value.draggedIndex + Math.round(deltaX / TAB_WIDTH)
+    )
+  );
+
+  dragState.value.currentIndex = newIndex;
+}
 </script>
 
 <template>
