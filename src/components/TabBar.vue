@@ -5,6 +5,17 @@ import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 const store = useTerminalStore();
 const dropdownOpen = ref(false);
 
+interface DragState {
+  draggedTabId: string;
+  draggedIndex: number;
+  currentIndex: number;
+  startX: number;
+  currentX: number;
+}
+
+// @ts-expect-error - Will be used in subsequent drag handler tasks
+const dragState = ref<DragState | null>(null);
+
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
   { type: 'powershell', label: 'PowerShell', icon: '❯', hint: 'Ctrl+T' },
   { type: 'cmd', label: 'CMD', icon: '⬛' },
