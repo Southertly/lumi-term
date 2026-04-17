@@ -208,7 +208,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   align-items: center;
   padding: 0 10px;
   gap: 8px;
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.15s ease;
   flex-shrink: 0;
   color: #cdd6f4;
@@ -217,6 +217,18 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .tab.active { background: #89b4fa; border-color: #89b4fa; color: #11111b; }
 .tab.active .tab-icon { color: #11111b; }
 .tab.active .tab-close { color: #11111b; opacity: 0.6; }
+
+.tab.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: none;
+}
+
+.tab:not(.dragging) {
+  transition: transform 0.15s ease;
+}
 
 .tab-icon { font-size: 13px; color: #89b4fa; flex-shrink: 0; }
 .tab.active .tab-icon { color: #11111b; }
