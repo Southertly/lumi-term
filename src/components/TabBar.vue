@@ -14,6 +14,7 @@ interface DragState {
 }
 
 const dragState = ref<DragState | null>(null);
+const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
 
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
   { type: 'powershell', label: 'PowerShell', icon: '❯', hint: 'Ctrl+T' },
@@ -48,7 +49,6 @@ function closeTab(e: MouseEvent, tabId: string) {
   }
 }
 
-// @ts-expect-error - Will be used in subsequent drag handler tasks
 function handlePointerDown(e: PointerEvent, tabId: string, index: number) {
   // Ignore if clicking close button
   if ((e.target as HTMLElement).closest('.tab-close')) return;
@@ -68,14 +68,12 @@ function handlePointerDown(e: PointerEvent, tabId: string, index: number) {
   };
 }
 
-// @ts-expect-error - Will be used in subsequent drag handler tasks
 function handlePointerMove(e: PointerEvent) {
   if (!dragState.value) return;
 
   dragState.value.currentX = e.clientX;
 
   const deltaX = dragState.value.currentX - dragState.value.startX;
-  const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
 
   const newIndex = Math.max(
     0,
@@ -94,6 +92,9 @@ function handlePointerMove(e: PointerEvent) {
 function handlePointerUp(e: PointerEvent) {
   if (!dragState.value) return;
 
+  const target = e.currentTarget as HTMLElement;
+  target.releasePointerCapture(e.pointerId);
+
   const deltaX = Math.abs(dragState.value.currentX - dragState.value.startX);
 
   // Only reorder if dragged more than 5px
@@ -104,19 +105,53 @@ function handlePointerUp(e: PointerEvent) {
   dragState.value = null;
 }
 
-function handlePointerCancel() {
+function handlePointerCancel(e: PointerEvent) {
+  if (!dragState.value) return;
+
+  const target = e.currentTarget as HTMLElement;
+  target.releasePointerCapture(e.pointerId);
+
   dragState.value = null;
+}
+
+function getTabStyle(tabId: string, index: number): Record<string, string> {
+  if (!dragState.value) return {};
+
+  // Dragged tab follows mouse
+  if (tabId === dragState.value.draggedTabId) {
+    const deltaX = dragState.value.currentX - dragState.value.startX;
+    return { transform: `translateX(${deltaX}px)` };
+  }
+
+  // Other tabs shift to make space
+  const draggedIdx = dragState.value.draggedIndex;
+  const currentIdx = dragState.value.currentIndex;
+
+  if (draggedIdx < currentIdx && index > draggedIdx && index <= currentIdx) {
+    return { transform: `translateX(-${TAB_WIDTH}px)` };
+  }
+
+  if (draggedIdx > currentIdx && index < draggedIdx && index >= currentIdx) {
+    return { transform: `translateX(${TAB_WIDTH}px)` };
+  }
+
+  return {};
 }
 </script>
 
 <template>
   <div class="tab-bar" @click.self="dropdownOpen = false">
     <div
-      v-for="tab in store.tabs"
+      v-for="(tab, index) in store.tabs"
       :key="tab.id"
       class="tab"
       :class="{ active: tab.id === store.activeTabId }"
+      :style="getTabStyle(tab.id, index)"
       @click="store.switchTab(tab.id)"
+      @pointerdown="handlePointerDown($event, tab.id, index)"
+      @pointermove="handlePointerMove($event)"
+      @pointerup="handlePointerUp($event)"
+      @pointercancel="handlePointerCancel($event)"
     >
       <span class="tab-icon">{{ iconMap[tab.shellType] }}</span>
       <span class="tab-title">{{ tab.title }}</span>
