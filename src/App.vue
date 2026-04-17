@@ -25,8 +25,8 @@ async function toggleMaximize() {
 }
 
 async function updateMaximizedState() {
-  const { appWindow } = await import('@tauri-apps/api/window');
-  isMaximized.value = await appWindow.isMaximized();
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  isMaximized.value = await getCurrentWindow().isMaximized();
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -67,9 +67,9 @@ onMounted(async () => {
   store.createTab('powershell');
   window.addEventListener('keydown', handleKeydown);
 
-  const { appWindow } = await import('@tauri-apps/api/window');
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
   await updateMaximizedState();
-  unlistenResize = await appWindow.listen('tauri://resize', updateMaximizedState);
+  unlistenResize = await getCurrentWindow().listen('tauri://resize', updateMaximizedState);
 });
 
 onUnmounted(() => {
