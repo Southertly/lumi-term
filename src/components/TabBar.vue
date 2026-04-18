@@ -13,7 +13,21 @@ interface DragState {
   currentX: number;
 }
 
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  targetTabId: string;
+}
+
+interface EditState {
+  editingTabId: string;
+  originalTitle: string;
+}
+
 const dragState = ref<DragState | null>(null);
+const contextMenuState = ref<ContextMenuState | null>(null);
+const editState = ref<EditState | null>(null);
 const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
 
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
