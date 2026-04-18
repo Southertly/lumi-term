@@ -75,8 +75,9 @@ export const useTerminalStore = defineStore('terminal', () => {
     const keepTab = tabs.value.find((t) => t.id === keepTabId);
     if (!keepTab) return;
 
-    tabs.value = [keepTab];
-    activeTabId.value = keepTabId;
+    // Remove other tabs one by one to trigger proper cleanup
+    const tabsToRemove = tabs.value.filter((t) => t.id !== keepTabId);
+    tabsToRemove.forEach((tab) => removeTab(tab.id));
   }
 
   return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab, closeOtherTabs };
