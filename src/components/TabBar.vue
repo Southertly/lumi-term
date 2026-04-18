@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 
 const store = useTerminalStore();
@@ -126,6 +126,78 @@ function handlePointerCancel(e: PointerEvent) {
   target.releasePointerCapture(e.pointerId);
 
   dragState.value = null;
+}
+
+function handleContextMenu(e: MouseEvent, tabId: string) {
+  e.preventDefault();
+
+  contextMenuState.value = {
+    visible: true,
+    x: e.clientX,
+    y: e.clientY,
+    targetTabId: tabId,
+  };
+}
+
+function handleGlobalClick(e: MouseEvent) {
+  if (!contextMenuState.value?.visible) return;
+
+  const menu = document.querySelector('.context-menu');
+  if (menu && !menu.contains(e.target as Node)) {
+    contextMenuState.value = null;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleGlobalClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleGlobalClick);
+});
+
+function handleRename() {
+  if (!contextMenuState.value) return;
+
+  const tab = store.tabs.find(t => t.id === contextMenuState.value!.targetTabId);
+  if (!tab) return;
+
+  editState.value = {
+    editingTabId: tab.id,
+    originalTitle: tab.title,
+  };
+
+  contextMenuState.value = null;
+}
+
+function handleCloseTab() {
+  if (!contextMenuState.value) return;
+
+  const tabId = contextMenuState.value.targetTabId;
+  contextMenuState.value = null;
+
+  const tab = store.tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  if (confirm(`关闭 ${tab.title}？`)) {
+    store.removeTab(tabId);
+    if (store.tabs.length === 0) {
+      setTimeout(() => {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => invoke('close_app'))
+          .catch((err) => console.error('[TabBar] close_app failed:', err));
+      }, 100);
+    }
+  }
+}
+
+function handleCloseOtherTabs() {
+  if (!contextMenuState.value) return;
+
+  const tabId = contextMenuState.value.targetTabId;
+  contextMenuState.value = null;
+
+  store.closeOtherTabs(tabId);
 }
 
 function getTabStyle(tabId: string, index: number): Record<string, string> {
