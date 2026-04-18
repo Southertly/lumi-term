@@ -71,5 +71,14 @@ export const useTerminalStore = defineStore('terminal', () => {
     tab.title = trimmed;
   }
 
-  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab };
+  function closeOtherTabs(keepTabId: string) {
+    const keepTab = tabs.value.find(t => t.id === keepTabId);
+    if (!keepTab) return;
+
+    // 保留目标标签，移除其他所有标签
+    tabs.value = [keepTab];
+    activeTabId.value = keepTabId;
+  }
+
+  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab, closeOtherTabs };
 });
