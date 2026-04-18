@@ -62,22 +62,22 @@ export const useTerminalStore = defineStore('terminal', () => {
   }
 
   function renameTab(tabId: string, newTitle: string) {
-    const tab = tabs.value.find(t => t.id === tabId);
+    const tab = tabs.value.find((t) => t.id === tabId);
     if (!tab) return;
 
     const trimmed = newTitle.trim();
-    if (trimmed.length === 0) return; // 空名称不更新
+    if (trimmed.length === 0) return;
 
     tab.title = trimmed;
   }
 
   function closeOtherTabs(keepTabId: string) {
-    const keepTab = tabs.value.find(t => t.id === keepTabId);
+    const keepTab = tabs.value.find((t) => t.id === keepTabId);
     if (!keepTab) return;
 
-    // 保留目标标签，移除其他所有标签
-    tabs.value = [keepTab];
-    activeTabId.value = keepTabId;
+    // Remove other tabs one by one to trigger proper cleanup
+    const tabsToRemove = tabs.value.filter((t) => t.id !== keepTabId);
+    tabsToRemove.forEach((tab) => removeTab(tab.id));
   }
 
   return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab, closeOtherTabs };

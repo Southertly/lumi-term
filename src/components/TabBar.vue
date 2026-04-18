@@ -105,7 +105,6 @@ function handlePointerMove(e: PointerEvent) {
   if (newIndex === dragState.value.currentIndex) return;
 
   dragState.value.currentIndex = newIndex;
-  // TODO: Visual feedback applied in Task 6 via getTabStyle computed helper
 }
 
 function handlePointerUp(e: PointerEvent) {
@@ -135,7 +134,6 @@ function handlePointerCancel(e: PointerEvent) {
 
 function handleContextMenu(e: MouseEvent, tabId: string) {
   e.preventDefault();
-
   contextMenuState.value = {
     visible: true,
     x: e.clientX,
@@ -146,7 +144,6 @@ function handleContextMenu(e: MouseEvent, tabId: string) {
 
 function handleGlobalClick(e: MouseEvent) {
   if (!contextMenuState.value?.visible) return;
-
   const menu = document.querySelector('.context-menu');
   if (menu && !menu.contains(e.target as Node)) {
     contextMenuState.value = null;
@@ -163,27 +160,20 @@ onUnmounted(() => {
 
 function handleRename() {
   if (!contextMenuState.value) return;
-
-  const tab = store.tabs.find(t => t.id === contextMenuState.value!.targetTabId);
+  const tabId = contextMenuState.value.targetTabId;
+  const tab = store.tabs.find((t) => t.id === tabId);
   if (!tab) return;
 
-  editState.value = {
-    editingTabId: tab.id,
-    originalTitle: tab.title,
-  };
-
   contextMenuState.value = null;
+  editState.value = { editingTabId: tabId, originalTitle: tab.title };
 }
 
 function handleCloseTab() {
   if (!contextMenuState.value) return;
-
   const tabId = contextMenuState.value.targetTabId;
   contextMenuState.value = null;
-
-  const tab = store.tabs.find(t => t.id === tabId);
+  const tab = store.tabs.find((t) => t.id === tabId);
   if (!tab) return;
-
   if (confirm(`关闭 ${tab.title}？`)) {
     store.removeTab(tabId);
     if (store.tabs.length === 0) {
@@ -198,28 +188,22 @@ function handleCloseTab() {
 
 function handleCloseOtherTabs() {
   if (!contextMenuState.value) return;
-
   const tabId = contextMenuState.value.targetTabId;
   contextMenuState.value = null;
-
   store.closeOtherTabs(tabId);
 }
 
 function confirmEdit(e: Event) {
   if (!editState.value) return;
-
   const input = e.target as HTMLInputElement;
   const newTitle = input.value.trim();
-
   if (newTitle.length > 0) {
     store.renameTab(editState.value.editingTabId, newTitle);
   }
-
   editState.value = null;
 }
 
 function cancelEdit() {
-  if (!editState.value) return;
   editState.value = null;
 }
 
@@ -264,9 +248,20 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       @pointermove="handlePointerMove($event)"
       @pointerup="handlePointerUp($event)"
       @pointercancel="handlePointerCancel($event)"
+      @contextmenu="handleContextMenu($event, tab.id)"
     >
       <span class="tab-icon">{{ iconMap[tab.shellType] }}</span>
-      <span class="tab-title">{{ tab.title }}</span>
+      <input
+        v-if="editState?.editingTabId === tab.id"
+        class="tab-title-input"
+        :value="tab.title"
+        @vue:mounted="(el: any) => el.select()"
+        @keydown.enter="confirmEdit"
+        @keydown.escape="cancelEdit"
+        @blur="confirmEdit"
+        @click.stop
+      />
+      <span v-else class="tab-title">{{ tab.title }}</span>
       <span class="tab-close" @click="closeTab($event, tab.id)">×</span>
     </div>
 
@@ -289,6 +284,29 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="contextMenuState?.visible"
+        class="context-menu"
+        :style="{ left: contextMenuState.x + 'px', top: contextMenuState.y + 'px' }"
+        @click.stop
+      >
+        <div class="context-menu-item" @click="handleRename">
+          重命名
+        </div>
+        <div class="context-menu-item" @click="handleCloseTab">
+          关闭标签
+        </div>
+        <div
+          class="context-menu-item"
+          :class="{ disabled: store.tabs.length <= 1 }"
+          @click="store.tabs.length > 1 && handleCloseOtherTabs()"
+        >
+          关闭其他标签
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -389,4 +407,45 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .item-icon { font-size: 14px; width: 18px; text-align: center; }
 .item-label { flex: 1; }
 .item-hint { font-size: 11px; color: #6c7086; }
+
+.context-menu {
+  position: fixed;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 160px;
+  z-index: 2000;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #cdd6f4;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  user-select: none;
+}
+
+.context-menu-item:hover:not(.disabled) {
+  background: #313244;
+}
+
+.context-menu-item.disabled {
+  color: #6c7086;
+  cursor: not-allowed;
+}
+
+.tab-title-input {
+  background: #1e1e2e;
+  border: 1px solid #89b4fa;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 13px;
+  color: #cdd6f4;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+}
 </style>
