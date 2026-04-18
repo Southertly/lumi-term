@@ -61,5 +61,23 @@ export const useTerminalStore = defineStore('terminal', () => {
     tabs.value.splice(toIndex, 0, movedTab);
   }
 
-  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs };
+  function renameTab(tabId: string, newTitle: string) {
+    const tab = tabs.value.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    const trimmed = newTitle.trim();
+    if (trimmed.length === 0) return;
+
+    tab.title = trimmed;
+  }
+
+  function closeOtherTabs(keepTabId: string) {
+    const keepTab = tabs.value.find((t) => t.id === keepTabId);
+    if (!keepTab) return;
+
+    tabs.value = [keepTab];
+    activeTabId.value = keepTabId;
+  }
+
+  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab, closeOtherTabs };
 });
