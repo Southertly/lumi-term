@@ -64,6 +64,11 @@ function closeTab(e: MouseEvent, tabId: string) {
 }
 
 function handlePointerDown(e: PointerEvent, tabId: string, index: number) {
+  // Cancel editing if in edit mode
+  if (editState.value) {
+    cancelEdit();
+  }
+
   // Ignore if clicking close button
   if ((e.target as HTMLElement).closest('.tab-close')) return;
 
@@ -198,6 +203,24 @@ function handleCloseOtherTabs() {
   contextMenuState.value = null;
 
   store.closeOtherTabs(tabId);
+}
+
+function confirmEdit(e: Event) {
+  if (!editState.value) return;
+
+  const input = e.target as HTMLInputElement;
+  const newTitle = input.value.trim();
+
+  if (newTitle.length > 0) {
+    store.renameTab(editState.value.editingTabId, newTitle);
+  }
+
+  editState.value = null;
+}
+
+function cancelEdit() {
+  if (!editState.value) return;
+  editState.value = null;
 }
 
 function getTabStyle(tabId: string, index: number): Record<string, string> {
