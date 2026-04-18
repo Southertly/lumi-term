@@ -61,5 +61,15 @@ export const useTerminalStore = defineStore('terminal', () => {
     tabs.value.splice(toIndex, 0, movedTab);
   }
 
-  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs };
+  function renameTab(tabId: string, newTitle: string) {
+    const tab = tabs.value.find(t => t.id === tabId);
+    if (!tab) return;
+
+    const trimmed = newTitle.trim();
+    if (trimmed.length === 0) return; // 空名称不更新
+
+    tab.title = trimmed;
+  }
+
+  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab };
 });
