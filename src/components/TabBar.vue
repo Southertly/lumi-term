@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 
 const store = useTerminalStore();
@@ -15,6 +15,21 @@ interface DragState {
 
 const dragState = ref<DragState | null>(null);
 const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
+
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  targetTabId: string;
+}
+
+interface EditState {
+  editingTabId: string;
+  originalTitle: string;
+}
+
+const contextMenuState = ref<ContextMenuState | null>(null);
+const editState = ref<EditState | null>(null);
 
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
   { type: 'powershell', label: 'PowerShell', icon: '❯', hint: 'Ctrl+T' },
@@ -114,6 +129,81 @@ function handlePointerCancel(e: PointerEvent) {
   dragState.value = null;
 }
 
+function handleContextMenu(e: MouseEvent, tabId: string) {
+  e.preventDefault();
+  contextMenuState.value = {
+    visible: true,
+    x: e.clientX,
+    y: e.clientY,
+    targetTabId: tabId,
+  };
+}
+
+function handleGlobalClick(e: MouseEvent) {
+  if (!contextMenuState.value?.visible) return;
+  const menu = document.querySelector('.context-menu');
+  if (menu && !menu.contains(e.target as Node)) {
+    contextMenuState.value = null;
+  }
+}
+
+function handleRename() {
+  if (!contextMenuState.value) return;
+  const tabId = contextMenuState.value.targetTabId;
+  const tab = store.tabs.find((t) => t.id === tabId);
+  if (!tab) return;
+
+  contextMenuState.value = null;
+  editState.value = { editingTabId: tabId, originalTitle: tab.title };
+}
+
+function confirmEdit(e: Event) {
+  if (!editState.value) return;
+  const input = e.target as HTMLInputElement;
+  const newTitle = input.value.trim();
+  if (newTitle.length > 0) {
+    store.renameTab(editState.value.editingTabId, newTitle);
+  }
+  editState.value = null;
+}
+
+function cancelEdit() {
+  editState.value = null;
+}
+
+function handleCloseTab() {
+  if (!contextMenuState.value) return;
+  const tabId = contextMenuState.value.targetTabId;
+  contextMenuState.value = null;
+  const tab = store.tabs.find((t) => t.id === tabId);
+  if (!tab) return;
+  if (confirm(`关闭 ${tab.title}？`)) {
+    store.removeTab(tabId);
+    if (store.tabs.length === 0) {
+      setTimeout(() => {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => invoke('close_app'))
+          .catch((err) => console.error('[TabBar] close_app failed:', err));
+      }, 100);
+    }
+  }
+}
+
+function handleCloseOtherTabs() {
+  if (!contextMenuState.value) return;
+  const tabId = contextMenuState.value.targetTabId;
+  contextMenuState.value = null;
+  store.closeOtherTabs(tabId);
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleGlobalClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleGlobalClick);
+});
+
 function getTabStyle(tabId: string, index: number): Record<string, string> {
   if (!dragState.value) return {};
 
@@ -180,6 +270,29 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="contextMenuState?.visible"
+        class="context-menu"
+        :style="{ left: contextMenuState.x + 'px', top: contextMenuState.y + 'px' }"
+        @click.stop
+      >
+        <div class="context-menu-item" @click="handleRename">
+          重命名
+        </div>
+        <div class="context-menu-item" @click="handleCloseTab">
+          关闭标签
+        </div>
+        <div
+          class="context-menu-item"
+          :class="{ disabled: store.tabs.length <= 1 }"
+          @click="store.tabs.length > 1 && handleCloseOtherTabs()"
+        >
+          关闭其他标签
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
