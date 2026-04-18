@@ -404,4 +404,45 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .item-icon { font-size: 14px; width: 18px; text-align: center; }
 .item-label { flex: 1; }
 .item-hint { font-size: 11px; color: #6c7086; }
+
+.context-menu {
+  position: fixed;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 160px;
+  z-index: 2000;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #cdd6f4;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  user-select: none;
+}
+
+.context-menu-item:hover:not(.disabled) {
+  background: #313244;
+}
+
+.context-menu-item.disabled {
+  color: #6c7086;
+  cursor: not-allowed;
+}
+
+.tab-title-input {
+  background: #1e1e2e;
+  border: 1px solid #89b4fa;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 13px;
+  color: #cdd6f4;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+}
 </style>
