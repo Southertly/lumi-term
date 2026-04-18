@@ -245,9 +245,20 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       @pointermove="handlePointerMove($event)"
       @pointerup="handlePointerUp($event)"
       @pointercancel="handlePointerCancel($event)"
+      @contextmenu="handleContextMenu($event, tab.id)"
     >
       <span class="tab-icon">{{ iconMap[tab.shellType] }}</span>
-      <span class="tab-title">{{ tab.title }}</span>
+      <input
+        v-if="editState?.editingTabId === tab.id"
+        class="tab-title-input"
+        :value="tab.title"
+        @vue:mounted="(el: any) => el.select()"
+        @keydown.enter="confirmEdit"
+        @keydown.escape="cancelEdit"
+        @blur="confirmEdit"
+        @click.stop
+      />
+      <span v-else class="tab-title">{{ tab.title }}</span>
       <span class="tab-close" @click="closeTab($event, tab.id)">×</span>
     </div>
 
