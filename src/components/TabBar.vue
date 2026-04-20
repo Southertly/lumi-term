@@ -244,8 +244,9 @@ function cancelEdit() {
   editState.value = null;
 }
 
-function openColorPicker(e: MouseEvent, tabId: string) {
+function openColorPicker(e: PointerEvent, tabId: string) {
   e.stopPropagation();
+  e.preventDefault();
   const rect = (e.target as HTMLElement).getBoundingClientRect();
   colorPickerState.value = {
     visible: true,
@@ -330,8 +331,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         class="tab-color-dot"
         :class="{ 'has-color': tab.color }"
         :style="tab.color ? { backgroundColor: tab.color } : {}"
-        @click="openColorPicker($event, tab.id)"
-        @pointerdown.stop
+        @pointerdown="openColorPicker($event, tab.id)"
       ></div>
       <span class="tab-close" @click="closeTab($event, tab.id)">×</span>
     </div>
