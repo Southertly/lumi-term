@@ -416,6 +416,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .tab-bar::-webkit-scrollbar { height: 0; }
 
 .tab {
+  position: relative;
   height: 32px;
   min-width: 140px;
   max-width: 200px;
@@ -424,7 +425,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   border-radius: 6px;
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 10px 0 14px;
   gap: 8px;
   cursor: grab;
   transition: all 0.15s ease;
@@ -461,6 +462,54 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 }
 .tab:hover .tab-close { opacity: 1; }
 .tab-close:hover { background: rgba(108,112,134,0.2); color: #cdd6f4; }
+
+.tab-color-bar {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 80%;
+  border-radius: 2px;
+}
+
+.tab-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+.tab:hover .tab-color-dot { opacity: 1; }
+.tab-color-dot.has-color { opacity: 1; }
+.tab-color-dot:hover { transform: scale(1.15); filter: brightness(1.1); }
+
+.tab-color-bar {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 80%;
+  border-radius: 2px;
+}
+
+.tab-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+.tab:hover .tab-color-dot { opacity: 1; }
+.tab-color-dot.has-color { opacity: 1; }
+.tab-color-dot:hover { transform: scale(1.15); filter: brightness(1.1); }
 
 .new-tab-wrapper { position: relative; }
 .new-tab-btn {
@@ -539,4 +588,39 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   width: 100%;
   font-family: inherit;
 }
+
+.color-picker {
+  position: fixed;
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  z-index: 2000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.color-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-option:hover {
+  transform: scale(1.15);
+}
+
+.color-option.clear {
+  background: rgba(107, 114, 128, 0.3);
+  border: 1px dashed rgba(107, 114, 128, 0.6);
+}
+
 </style>
