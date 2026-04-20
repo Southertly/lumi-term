@@ -384,6 +384,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       v-if="colorPickerState"
       class="color-picker"
       :style="{ left: colorPickerState.x + 'px', top: colorPickerState.y + 'px' }"
+      @pointerdown.stop
       @click.stop
     >
       <div
@@ -392,9 +393,9 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         class="color-option"
         :style="{ backgroundColor: color.value }"
         :title="color.label"
-        @click="selectColor(color.value)"
+        @pointerdown.stop="selectColor(color.value)"
       ></div>
-      <div class="color-option clear" title="清除颜色" @click="clearColor">
+      <div class="color-option clear" title="清除颜色" @pointerdown.stop="clearColor">
         <span style="font-size: 14px; color: #6b7280;">×</span>
       </div>
     </div>
