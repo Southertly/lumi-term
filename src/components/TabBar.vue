@@ -384,7 +384,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       v-if="colorPickerState"
       class="color-picker"
       :style="{ left: colorPickerState.x + 'px', top: colorPickerState.y + 'px' }"
-      @pointerdown.stop
+      @click.stop
     >
       <div
         v-for="color in PRESET_COLORS"
