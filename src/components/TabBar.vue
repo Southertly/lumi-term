@@ -164,20 +164,30 @@ function handleContextMenu(e: MouseEvent, tabId: string) {
   };
 }
 
-function handleGlobalClick(e: MouseEvent) {
-  if (!contextMenuState.value?.visible) return;
-  const menu = document.querySelector('.context-menu');
-  if (menu && !menu.contains(e.target as Node)) {
-    contextMenuState.value = null;
-  }
-}
-
 onMounted(() => {
-  document.addEventListener('click', handleGlobalClick);
-});
+  function handleGlobalPointerDown(e: PointerEvent) {
+    // 关闭右键菜单
+    if (contextMenuState.value) {
+      const menu = document.querySelector('.context-menu');
+      if (menu && !menu.contains(e.target as Node)) {
+        contextMenuState.value = null;
+      }
+    }
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleGlobalClick);
+    // 关闭颜色选择器
+    if (colorPickerState.value) {
+      const picker = document.querySelector('.color-picker');
+      if (picker && !picker.contains(e.target as Node)) {
+        colorPickerState.value = null;
+      }
+    }
+  }
+
+  document.addEventListener('pointerdown', handleGlobalPointerDown);
+
+  onUnmounted(() => {
+    document.removeEventListener('pointerdown', handleGlobalPointerDown);
+  });
 });
 
 function handleRename() {
@@ -232,6 +242,29 @@ function confirmEdit(e: Event) {
 
 function cancelEdit() {
   editState.value = null;
+}
+
+function openColorPicker(e: MouseEvent, tabId: string) {
+  e.stopPropagation();
+  const rect = (e.target as HTMLElement).getBoundingClientRect();
+  colorPickerState.value = {
+    visible: true,
+    targetTabId: tabId,
+    x: rect.left,
+    y: rect.bottom + 4,
+  };
+}
+
+function selectColor(color: string) {
+  if (!colorPickerState.value) return;
+  store.setTabColor(colorPickerState.value.targetTabId, color);
+  colorPickerState.value = null;
+}
+
+function clearColor() {
+  if (!colorPickerState.value) return;
+  store.setTabColor(colorPickerState.value.targetTabId, null);
+  colorPickerState.value = null;
 }
 
 function getTabStyle(tabId: string, index: number): Record<string, string> {
