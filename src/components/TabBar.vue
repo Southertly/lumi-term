@@ -310,6 +310,9 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       @pointercancel="handlePointerCancel($event)"
       @contextmenu="handleContextMenu($event, tab.id)"
     >
+      <!-- 彩色竖条 -->
+      <div v-if="tab.color" class="tab-color-bar" :style="{ backgroundColor: tab.color }"></div>
+
       <span class="tab-icon">{{ iconMap[tab.shellType] }}</span>
       <input
         v-if="editState?.editingTabId === tab.id"
@@ -322,6 +325,14 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         @pointerdown.stop
       />
       <span v-else class="tab-title">{{ tab.title }}</span>
+      <!-- 颜色圆点 -->
+      <div
+        class="tab-color-dot"
+        :class="{ 'has-color': tab.color }"
+        :style="tab.color ? { backgroundColor: tab.color } : {}"
+        @click="openColorPicker($event, tab.id)"
+        @pointerdown.stop
+      ></div>
       <span class="tab-close" @click="closeTab($event, tab.id)">×</span>
     </div>
 
@@ -367,6 +378,26 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         </div>
       </div>
     </Teleport>
+
+    <!-- 颜色选择器 -->
+    <div
+      v-if="colorPickerState"
+      class="color-picker"
+      :style="{ left: colorPickerState.x + 'px', top: colorPickerState.y + 'px' }"
+      @pointerdown.stop
+    >
+      <div
+        v-for="color in PRESET_COLORS"
+        :key="color.value"
+        class="color-option"
+        :style="{ backgroundColor: color.value }"
+        :title="color.label"
+        @click="selectColor(color.value)"
+      ></div>
+      <div class="color-option clear" title="清除颜色" @click="clearColor">
+        <span style="font-size: 14px; color: #6b7280;">×</span>
+      </div>
+    </div>
   </div>
 </template>
 
