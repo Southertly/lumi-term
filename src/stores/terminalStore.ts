@@ -8,6 +8,7 @@ export interface Tab {
   title: string;
   shellType: ShellType;
   sessionId: string | null;
+  color?: string;
 }
 
 export const useTerminalStore = defineStore('terminal', () => {
@@ -80,5 +81,16 @@ export const useTerminalStore = defineStore('terminal', () => {
     tabsToRemove.forEach((tab) => removeTab(tab.id));
   }
 
-  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab, closeOtherTabs };
+  function setTabColor(tabId: string, color: string | null) {
+    const tab = tabs.value.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    if (color === null) {
+      delete tab.color;
+    } else {
+      tab.color = color;
+    }
+  }
+
+  return { tabs, activeTabId, createTab, setSessionId, removeTab, switchTab, reorderTabs, renameTab, closeOtherTabs, setTabColor };
 });
