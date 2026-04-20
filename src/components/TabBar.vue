@@ -488,30 +488,6 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .tab-color-dot.has-color { opacity: 1; }
 .tab-color-dot:hover { transform: scale(1.15); filter: brightness(1.1); }
 
-.tab-color-bar {
-  position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 80%;
-  border-radius: 2px;
-}
-
-.tab-color-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.3);
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  opacity: 0;
-}
-.tab:hover .tab-color-dot { opacity: 1; }
-.tab-color-dot.has-color { opacity: 1; }
-.tab-color-dot:hover { transform: scale(1.15); filter: brightness(1.1); }
-
 .new-tab-wrapper { position: relative; }
 .new-tab-btn {
   width: 32px; height: 32px;

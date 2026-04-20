@@ -86,7 +86,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     if (!tab) return;
 
     if (color === null) {
-      delete tab.color;
+      tab.color = undefined;
     } else {
       tab.color = color;
     }
