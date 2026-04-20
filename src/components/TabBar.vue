@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted } from 'vue';
 import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 
 const store = useTerminalStore();
@@ -25,9 +25,17 @@ interface EditState {
   originalTitle: string;
 }
 
+interface ColorPickerState {
+  visible: boolean;
+  targetTabId: string;
+  x: number;
+  y: number;
+}
+
 const dragState = ref<DragState | null>(null);
 const contextMenuState = ref<ContextMenuState | null>(null);
 const editState = ref<EditState | null>(null);
+const colorPickerState = ref<ColorPickerState | null>(null);
 const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
 
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
@@ -41,6 +49,17 @@ const iconMap: Record<ShellType, string> = {
   cmd: '⬛',
   wsl2: '🐧',
 };
+
+const PRESET_COLORS = [
+  { value: '#ef4444', label: '红色' },
+  { value: '#f97316', label: '橙色' },
+  { value: '#eab308', label: '黄色' },
+  { value: '#22c55e', label: '绿色' },
+  { value: '#3b82f6', label: '蓝色' },
+  { value: '#a855f7', label: '紫色' },
+  { value: '#ec4899', label: '粉色' },
+  { value: '#6b7280', label: '灰色' },
+];
 
 function openTab(shellType: ShellType) {
   store.createTab(shellType);
@@ -64,6 +83,9 @@ function closeTab(e: MouseEvent, tabId: string) {
 }
 
 function handlePointerDown(e: PointerEvent, tabId: string, index: number) {
+  // Right click is reserved for context menu
+  if (e.button !== 0) return;
+
   // Cancel editing if in edit mode
   if (editState.value) {
     cancelEdit();
@@ -166,6 +188,11 @@ function handleRename() {
 
   contextMenuState.value = null;
   editState.value = { editingTabId: tabId, originalTitle: tab.title };
+
+  nextTick(() => {
+    const input = document.querySelector<HTMLInputElement>('.tab-title-input');
+    if (input) { input.focus(); input.select(); }
+  });
 }
 
 function handleCloseTab() {
@@ -255,11 +282,11 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         v-if="editState?.editingTabId === tab.id"
         class="tab-title-input"
         :value="tab.title"
-        @vue:mounted="(el: any) => el.select()"
         @keydown.enter="confirmEdit"
         @keydown.escape="cancelEdit"
         @blur="confirmEdit"
         @click.stop
+        @pointerdown.stop
       />
       <span v-else class="tab-title">{{ tab.title }}</span>
       <span class="tab-close" @click="closeTab($event, tab.id)">×</span>
