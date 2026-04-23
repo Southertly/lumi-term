@@ -44,6 +44,7 @@ let instance: TerminalInstance | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let isMounted = true;
 let contextMenuCleanup: (() => void) | null = null;
+let focusCleanup: (() => void) | null = null;
 
 // ── Session state ──
 const sessionId = ref<string | null>(null);
@@ -101,24 +102,29 @@ async function init(container: HTMLElement) {
   };
 
   // ── Spawn PTY ──
+  let sid: string;
   try {
-    const sid = await invoke<string>('create_pty', {
+    sid = await invoke<string>('create_pty', {
       shell: shellCommands[props.shellType],
       cols: terminal.cols,
       rows: terminal.rows,
       channel,
     });
-    sessionId.value = sid;
-    store.setPaneSessionId(props.tabId, props.paneId, sid);
   } catch (e) {
     terminal.write(`\r\nFailed to start shell: ${e}\r\n`);
     return;
   }
+  if (!isMounted) {
+    invoke('close_pty_cmd', { sessionId: sid }).catch(() => {});
+    return;
+  }
+  sessionId.value = sid;
+  store.setPaneSessionId(props.tabId, props.paneId, sid);
 
   // ── Focus tracking ──
-  terminal.element?.addEventListener('focus', () => {
-    store.setActivePane(props.tabId, props.paneId);
-  });
+  const onFocus = () => store.setActivePane(props.tabId, props.paneId);
+  terminal.element?.addEventListener('focus', onFocus);
+  focusCleanup = () => terminal.element?.removeEventListener('focus', onFocus);
 
   // ── Right-click menu ──
   const onContextMenu = (e: MouseEvent) => {
@@ -226,6 +232,7 @@ onUnmounted(() => {
   window.removeEventListener('lumiterm:cut', handleTerminalCut);
   document.removeEventListener('click', handleGlobalClick);
   contextMenuCleanup?.();
+  focusCleanup?.();
   resizeObserver?.disconnect();
   if (sessionId.value) invoke('close_pty_cmd', { sessionId: sessionId.value }).catch(() => {});
   instance?.dispose();
