@@ -31,6 +31,13 @@ pub fn spawn_shell(
     let mut cmd = CommandBuilder::new(&shell);
     if shell.to_lowercase().contains("cmd") {
         cmd.args(["/c", "chcp 65001 >nul && cmd"]);
+    } else if shell.to_lowercase().contains("powershell") {
+        cmd.args([
+            "-NoLogo",
+            "-NoExit",
+            "-Command",
+            "Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView",
+        ]);
     }
     cmd.env("TERM", "xterm-256color");
 
