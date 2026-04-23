@@ -4,7 +4,7 @@ import { ref } from 'vue';
 export type ShortcutAction =
   | 'copy' | 'paste' | 'cut'
   | 'new-tab' | 'close-tab' | 'next-tab' | 'prev-tab'
-  | 'history-search' | 'open-settings';
+  | 'open-settings';
 
 export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   'copy': '复制',
@@ -14,14 +14,12 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   'close-tab': '关闭标签页',
   'next-tab': '切换到下一个',
   'prev-tab': '切换到上一个',
-  'history-search': '搜索历史命令',
   'open-settings': '打开设置',
 };
 
 export const SHORTCUT_GROUPS: { label: string; actions: ShortcutAction[] }[] = [
   { label: '编辑', actions: ['copy', 'paste', 'cut'] },
   { label: '标签页', actions: ['new-tab', 'close-tab', 'next-tab', 'prev-tab'] },
-  { label: '历史', actions: ['history-search'] },
   { label: '设置', actions: ['open-settings'] },
 ];
 
@@ -33,7 +31,6 @@ const DEFAULT_BINDINGS: Record<ShortcutAction, string> = {
   'close-tab': 'Ctrl+W',
   'next-tab': 'Ctrl+Tab',
   'prev-tab': 'Ctrl+Shift+Tab',
-  'history-search': 'Ctrl+R',
   'open-settings': 'Ctrl+,',
 };
 
