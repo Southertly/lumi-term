@@ -46,6 +46,7 @@ const inputBarRef = ref<InstanceType<typeof InputBar> | null>(null);
 let instance: TerminalInstance | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let isMounted = true;
+let contextMenuCleanup: (() => void) | null = null;
 
 // ── Warp-style state ──
 const sessionId = ref<string | null>(null);
@@ -73,8 +74,12 @@ async function handleCopy() {
 
 async function handlePaste() {
   const text = await navigator.clipboard.readText().catch(() => '');
-  if (text && sessionId.value) {
-    instance?.terminal.paste(text);
+  if (text) {
+    if (isInteractiveMode.value && sessionId.value) {
+      instance?.terminal.paste(text);
+    } else {
+      inputBarRef.value?.fillCommand(text);
+    }
   }
   closeContextMenu();
 }
@@ -104,7 +109,7 @@ const shellCommands: Record<ShellType, string> = {
 function parseOsc7(text: string): string | null {
   // Matches \x1b]7;file://hostname/path\x07  or  \x1b]7;file://hostname/path\x1b\\
   const m = text.match(/\x1b\]7;file:\/\/[^/]*([^\x07\x1b]*)(?:\x07|\x1b\\)/);
-  if (!m) return null;
+  if (!m || m[1].length > 4096) return null;
   try { return decodeURIComponent(m[1]); } catch { return m[1]; }
 }
 
@@ -169,11 +174,13 @@ async function init(container: HTMLElement) {
   });
 
   // ── Right-click menu ──
-  container.addEventListener('contextmenu', (e) => {
+  const onContextMenu = (e: MouseEvent) => {
     e.preventDefault();
     hasTerminalSelection.value = !!terminal.hasSelection();
     contextMenu.value = { x: e.clientX, y: e.clientY };
-  });
+  };
+  container.addEventListener('contextmenu', onContextMenu);
+  contextMenuCleanup = () => container.removeEventListener('contextmenu', onContextMenu);
 
   // ── Keyboard filter ──
   terminal.attachCustomKeyEventHandler((e) => {
@@ -286,6 +293,7 @@ onUnmounted(() => {
   window.removeEventListener('lumiterm:cut', handleTerminalCut);
   window.removeEventListener('lumiterm:history-search', handleOpenHistorySearch);
   document.removeEventListener('click', handleGlobalClick);
+  contextMenuCleanup?.();
   resizeObserver?.disconnect();
   if (sessionId.value) invoke('close_pty_cmd', { sessionId: sessionId.value }).catch(() => {});
   instance?.dispose();

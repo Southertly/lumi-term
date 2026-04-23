@@ -613,10 +613,10 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 
 .context-menu {
   position: fixed;
-  background: #f8fafc;
-  border: 1px solid #94a3b8;
+  background: var(--ui-bg-lighter);
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
   min-width: 160px;
   z-index: 2000;
   padding: 4px 0;
@@ -625,31 +625,33 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .context-menu-item {
   padding: 9px 14px;
   font-size: 13px;
-  color: #0f172a;
+  color: var(--ui-fg);
   cursor: pointer;
   transition: background 0.1s ease;
   user-select: none;
+  display: flex;
+  align-items: center;
 }
 
 .context-menu-item:hover:not(.disabled) {
-  background: #e2e8f0;
+  background: var(--ui-hover);
 }
 
 .context-menu-item.disabled {
-  color: #64748b;
+  color: var(--ui-fg-muted);
   cursor: not-allowed;
 }
 
 .context-menu-separator {
   height: 1px;
-  background: #cbd5e1;
+  background: var(--ui-border);
   margin: 4px 8px;
 }
 
 .menu-hint {
   margin-left: auto;
   font-size: 11px;
-  color: #475569;
+  color: var(--ui-fg-muted);
   padding-left: 20px;
 }
 

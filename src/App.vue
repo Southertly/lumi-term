@@ -14,6 +14,7 @@ const themeStore = useThemeStore();
 const historyStore = useHistoryStore();
 const shortcutsStore = useShortcutsStore();
 const showSettings = ref(false);
+const onOpenSettings = () => { showSettings.value = true; };
 
 const uiVars = computed(() => {
   const ui = themeStore.getCurrentTheme().ui;
@@ -91,16 +92,20 @@ function handleKeydown(e: KeyboardEvent) {
     return;
   }
   if (shortcutsStore.matchesEvent('copy', e)) {
+    // Skip if xterm has focus — let Ctrl+C reach PTY as SIGINT in interactive mode
+    if ((document.activeElement as HTMLElement)?.classList.contains('xterm-helper-textarea')) return;
     e.preventDefault();
     window.dispatchEvent(new CustomEvent('lumiterm:copy'));
     return;
   }
   if (shortcutsStore.matchesEvent('paste', e)) {
+    if ((document.activeElement as HTMLElement)?.classList.contains('xterm-helper-textarea')) return;
     e.preventDefault();
     window.dispatchEvent(new CustomEvent('lumiterm:paste'));
     return;
   }
   if (shortcutsStore.matchesEvent('cut', e)) {
+    if ((document.activeElement as HTMLElement)?.classList.contains('xterm-helper-textarea')) return;
     e.preventDefault();
     window.dispatchEvent(new CustomEvent('lumiterm:cut'));
     return;
@@ -214,7 +219,7 @@ function handleKeydown(e: KeyboardEvent) {
 onMounted(async () => {
   store.restoreTabs();
   historyStore.cleanup();
-  window.addEventListener('lumiterm:open-settings', () => { showSettings.value = true; });
+  window.addEventListener('lumiterm:open-settings', onOpenSettings);
   window.addEventListener('keydown', handleKeydown);
 
   const { getCurrentWindow } = await import('@tauri-apps/api/window');
@@ -224,6 +229,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('lumiterm:open-settings', onOpenSettings);
   if (unlistenResize) unlistenResize();
 });
 </script>

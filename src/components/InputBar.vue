@@ -56,6 +56,9 @@ function navigateHistory(direction: -1 | 1) {
   const list = historyStore.list();
   if (list.length === 0) return;
 
+  // Down from empty input does nothing
+  if (direction === 1 && historyIndex.value === -1) return;
+
   if (historyIndex.value === -1 && direction === -1) {
     historyIndex.value = 0;
   } else {

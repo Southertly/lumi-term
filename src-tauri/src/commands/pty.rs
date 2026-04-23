@@ -63,6 +63,10 @@ pub fn toggle_maximize(window: tauri::Window) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_git_branch(path: String) -> String {
+    // Validate path is an existing directory before spawning git
+    if !std::path::Path::new(&path).is_dir() {
+        return String::new();
+    }
     let result = tokio::task::spawn_blocking(move || {
         std::process::Command::new("git")
             .args(["rev-parse", "--abbrev-ref", "HEAD"])
