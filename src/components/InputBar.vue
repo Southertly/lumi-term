@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { useHistoryStore } from '../stores/historyStore';
 
@@ -101,12 +101,15 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 function selectHistoryItem(command: string) {
-  // Called by mousedown on a history item
-  showHistory.value = false;
+  if (blurTimer !== null) {
+    clearTimeout(blurTimer);
+    blurTimer = null;
+  }
   inputValue.value = command;
   selectedHistoryIndex.value = -1;
-  nextTick(() => inputRef.value?.focus());
+  showHistory.value = false;
   sendCommand();
+  inputRef.value?.focus();
 }
 
 function sendCommand() {
@@ -129,6 +132,13 @@ function fillCommand(command: string) {
   selectedHistoryIndex.value = -1;
   nextTick(() => inputRef.value?.focus());
 }
+
+onUnmounted(() => {
+  if (blurTimer !== null) {
+    clearTimeout(blurTimer);
+    blurTimer = null;
+  }
+});
 
 defineExpose({ fillCommand, focus: () => inputRef.value?.focus() });
 </script>
