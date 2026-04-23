@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 
 const store = useTerminalStore();
@@ -38,10 +38,16 @@ const editState = ref<EditState | null>(null);
 const colorPickerState = ref<ColorPickerState | null>(null);
 const TAB_WIDTH = 148; // min-width(140) + gap(4) + border(4)
 
+const canSplitTab = computed(() => {
+  if (!contextMenuState.value) return false;
+  const tab = store.tabs.find((t) => t.id === contextMenuState.value!.targetTabId);
+  return !!tab && tab.panes.length < 2;
+});
+
 const shells: { type: ShellType; label: string; icon: string; hint?: string }[] = [
   { type: 'powershell', label: 'PowerShell', icon: '❯', hint: 'Ctrl+T' },
-  { type: 'cmd', label: 'CMD', icon: '⬛' },
-  { type: 'wsl2', label: 'WSL2', icon: '🐧' },
+  { type: 'cmd', label: 'CMD', icon: '⬛', hint: 'Ctrl+Shift+N' },
+  { type: 'wsl2', label: 'WSL2', icon: '🐧', hint: 'Ctrl+Shift+L' },
 ];
 
 const iconMap: Record<ShellType, string> = {
@@ -181,12 +187,31 @@ onMounted(() => {
         colorPickerState.value = null;
       }
     }
+
+    // 关闭下拉菜单
+    const dropdownEl = document.querySelector('.new-tab-wrapper');
+    if (dropdownOpen.value && dropdownEl && !dropdownEl.contains(e.target as Node)) {
+      dropdownOpen.value = false;
+    }
+  }
+
+  function handleRenameShortcut(e: Event) {
+    const tabId = (e as CustomEvent).detail;
+    const tab = store.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    editState.value = { editingTabId: tabId, originalTitle: tab.title };
+    nextTick(() => {
+      const input = document.querySelector<HTMLInputElement>('.tab-title-input');
+      if (input) { input.focus(); input.select(); }
+    });
   }
 
   document.addEventListener('pointerdown', handleGlobalPointerDown);
+  window.addEventListener('lumiterm:rename-tab', handleRenameShortcut);
 
   onUnmounted(() => {
     document.removeEventListener('pointerdown', handleGlobalPointerDown);
+    window.removeEventListener('lumiterm:rename-tab', handleRenameShortcut);
   });
 });
 
@@ -230,6 +255,13 @@ function handleCloseOtherTabs() {
   store.closeOtherTabs(tabId);
 }
 
+function handleSplit(direction: 'horizontal' | 'vertical') {
+  if (!contextMenuState.value) return;
+  const tabId = contextMenuState.value.targetTabId;
+  contextMenuState.value = null;
+  store.splitTab(tabId, direction);
+}
+
 function confirmEdit(e: Event) {
   if (!editState.value) return;
   const input = e.target as HTMLInputElement;
@@ -266,6 +298,11 @@ function clearColor() {
   if (!colorPickerState.value) return;
   store.setTabColor(colorPickerState.value.targetTabId, null);
   colorPickerState.value = null;
+}
+
+function openSettings() {
+  window.dispatchEvent(new CustomEvent('lumiterm:open-settings'));
+  dropdownOpen.value = false;
 }
 
 function getTabStyle(tabId: string, index: number): Record<string, string> {
@@ -326,6 +363,10 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         @pointerdown.stop
       />
       <span v-else class="tab-title">{{ tab.title }}</span>
+      <span v-if="tab.panes.length > 1" class="split-indicator"
+            :title="tab.splitDirection === 'vertical' ? '左右分屏' : '上下分屏'">
+        {{ tab.splitDirection === 'vertical' ? '▐' : '▀' }}
+      </span>
       <!-- 颜色圆点 -->
       <div
         class="tab-color-dot"
@@ -356,6 +397,10 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
       </div>
     </div>
 
+    <div class="settings-wrapper">
+      <div class="settings-btn" @click.stop="openSettings()">⚙</div>
+    </div>
+
     <Teleport to="body">
       <div
         v-if="contextMenuState?.visible"
@@ -366,6 +411,24 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
         <div class="context-menu-item" @click="handleRename">
           重命名
         </div>
+        <div class="context-menu-separator"></div>
+        <div
+          class="context-menu-item"
+          :class="{ disabled: !canSplitTab }"
+          @click="canSplitTab && handleSplit('vertical')"
+        >
+          ▐ 左右分屏
+          <span class="menu-hint">Ctrl+Shift+D</span>
+        </div>
+        <div
+          class="context-menu-item"
+          :class="{ disabled: !canSplitTab }"
+          @click="canSplitTab && handleSplit('horizontal')"
+        >
+          ▀ 上下分屏
+          <span class="menu-hint">Ctrl+Shift+E</span>
+        </div>
+        <div class="context-menu-separator"></div>
         <div class="context-menu-item" @click="handleCloseTab">
           关闭标签
         </div>
@@ -405,12 +468,12 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 <style scoped>
 .tab-bar {
   height: 40px;
-  background: #181825;
+  background: var(--ui-bg);
   display: flex;
   align-items: center;
   padding: 0 8px;
   gap: 4px;
-  border-bottom: 1px solid #11111b;
+  border-bottom: 1px solid var(--ui-border);
   overflow-x: auto;
   overflow-y: visible;
 }
@@ -421,8 +484,8 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   height: 32px;
   min-width: 140px;
   max-width: 200px;
-  background: #1e1e2e;
-  border: 1px solid #313244;
+  background: var(--ui-bg-light);
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -431,10 +494,10 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   cursor: grab;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  color: #cdd6f4;
+  color: var(--ui-fg);
 }
-.tab:hover { background: #262637; border-color: #45475a; }
-.tab.active { background: #89b4fa; border-color: #89b4fa; color: #11111b; }
+.tab:hover { background: var(--ui-bg-lighter); border-color: var(--ui-hover); }
+.tab.active { background: var(--ui-accent); border-color: var(--ui-accent); color: #11111b; }
 .tab.active .tab-icon { color: #11111b; }
 .tab.active .tab-close { color: #11111b; opacity: 0.6; }
 
@@ -450,9 +513,17 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   transition: transform 0.15s ease;
 }
 
-.tab-icon { font-size: 13px; color: #89b4fa; flex-shrink: 0; }
+.tab-icon { font-size: 13px; color: var(--ui-accent); flex-shrink: 0; }
 .tab.active .tab-icon { color: #11111b; }
 .tab-title { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+
+.split-indicator {
+  font-size: 11px;
+  color: var(--ui-fg-muted);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.tab.active .split-indicator { color: rgba(17,17,27,0.5); }
 .tab-close {
   width: 16px; height: 16px;
   border-radius: 3px;
@@ -462,7 +533,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   transition: all 0.15s ease;
 }
 .tab:hover .tab-close { opacity: 1; }
-.tab-close:hover { background: rgba(108,112,134,0.2); color: #cdd6f4; }
+.tab-close:hover { background: rgba(108,112,134,0.2); color: var(--ui-fg); }
 
 .tab-color-bar {
   position: absolute;
@@ -491,22 +562,37 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .new-tab-wrapper { position: relative; }
 .new-tab-btn {
   width: 32px; height: 32px;
-  background: #1e1e2e;
-  border: 1px solid #313244;
+  background: var(--ui-bg-light);
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
-  color: #89b4fa; font-size: 20px; line-height: 1;
+  color: var(--ui-accent); font-size: 20px; line-height: 1;
   user-select: none;
 }
-.new-tab-btn:hover, .new-tab-btn.open { background: #262637; border-color: #45475a; }
+.new-tab-btn:hover, .new-tab-btn.open { background: var(--ui-bg-lighter); border-color: var(--ui-hover); }
+
+.settings-wrapper { position: relative; margin-left: auto; }
+.settings-btn {
+  width: 32px; height: 32px;
+  background: var(--ui-bg-light);
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--ui-fg-muted); font-size: 16px; line-height: 1;
+  user-select: none;
+}
+.settings-btn:hover, .settings-btn.open { background: var(--ui-bg-lighter); border-color: var(--ui-hover); color: var(--ui-fg); }
+
 
 .dropdown {
   position: fixed;
   margin-top: 36px;
-  background: #181825;
-  border: 1px solid #313244;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
   overflow: hidden;
   min-width: 160px;
@@ -518,19 +604,19 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   padding: 9px 14px;
   font-size: 13px; cursor: pointer;
   transition: background 0.1s ease;
-  color: #cdd6f4;
+  color: var(--ui-fg);
 }
-.dropdown-item:hover { background: #313244; }
+.dropdown-item:hover { background: var(--ui-border); }
 .item-icon { font-size: 14px; width: 18px; text-align: center; }
 .item-label { flex: 1; }
-.item-hint { font-size: 11px; color: #6c7086; }
+.item-hint { font-size: 11px; color: var(--ui-fg-muted); }
 
 .context-menu {
   position: fixed;
-  background: #181825;
-  border: 1px solid #313244;
+  background: #f8fafc;
+  border: 1px solid #94a3b8;
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   min-width: 160px;
   z-index: 2000;
   padding: 4px 0;
@@ -539,28 +625,41 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .context-menu-item {
   padding: 9px 14px;
   font-size: 13px;
-  color: #cdd6f4;
+  color: #0f172a;
   cursor: pointer;
   transition: background 0.1s ease;
   user-select: none;
 }
 
 .context-menu-item:hover:not(.disabled) {
-  background: #313244;
+  background: #e2e8f0;
 }
 
 .context-menu-item.disabled {
-  color: #6c7086;
+  color: #64748b;
   cursor: not-allowed;
 }
 
+.context-menu-separator {
+  height: 1px;
+  background: #cbd5e1;
+  margin: 4px 8px;
+}
+
+.menu-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: #475569;
+  padding-left: 20px;
+}
+
 .tab-title-input {
-  background: #1e1e2e;
-  border: 1px solid #89b4fa;
+  background: var(--ui-bg-light);
+  border: 1px solid var(--ui-accent);
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 13px;
-  color: #cdd6f4;
+  color: var(--ui-fg);
   outline: none;
   width: 100%;
   font-family: inherit;
@@ -568,9 +667,9 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 
 .color-picker {
   position: fixed;
-  background: rgba(30, 30, 30, 0.95);
+  background: var(--ui-bg);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
   padding: 8px;
   display: grid;
