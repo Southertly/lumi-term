@@ -19,7 +19,9 @@
 - 新增 `InputBar.vue` 组件（底部固定输入栏）
 - 新增 `HistorySearch.vue` 组件（`Ctrl+R` 模糊搜索浮层）
 - 新增 `historyStore.ts`（Frecency 历史管理）
-- `TerminalPane.vue` 集成 InputBar，处理交互式模式检测
+- 新增 `SettingsModal.vue` 组件（居中模态框，含主题/字体/快捷键三个分页）
+- 新增 `shortcutsStore.ts`（自定义快捷键持久化）
+- `TerminalPane.vue` 集成 InputBar，处理交互式模式检测，添加右键上下文菜单
 - `themeStore.ts` 加入 Warp Dark 主题定义
 - Tab bar 视觉小幅优化（间距、圆角对齐新主题）
 
@@ -232,6 +234,119 @@ InputBar 显示/隐藏后（transition 结束），调用 `fitAddon.fit()` 重�
 
 ---
 
+## 设置面板
+
+### SettingsModal.vue
+
+居中模态框，`Teleport` 到 `<body>` 顶层渲染。背景遮罩（`rgba(0,0,0,0.5)`），点击遮罩或按 `ESC` 关闭。
+
+**触发方式:** TabBar 的 ⚙ 按钮（替换现有主题下拉菜单）。
+
+**布局:**
+```
+┌──────────────────────────────────────────────┐
+│  左侧导航 120px  │  右侧内容区（flex:1）        │
+│                  │                            │
+│  SETTINGS        │  [当前分页内容]              │
+│  🎨 主题  ←活跃  │                            │
+│  🔤 字体         │                            │
+│  ⌨️ 快捷键       │                            │
+└──────────────────────────────────────────────┘
+```
+
+**三个分页:**
+
+---
+
+#### 主题分页
+
+6个主题卡片网格（2行×3列）。每张卡片展示主题双色预览（`background` 和 `ui-bg-light` 的对角渐变），当前激活主题显示蓝色边框和 ✓ 标记。点击立即切换（调用 `themeStore.setTheme()`）。
+
+---
+
+#### 字体分页
+
+| 控件 | 说明 |
+|---|---|
+| 字体下拉 | 选项：Cascadia Code（默认）、JetBrains Mono、Fira Code、Consolas、SF Mono、Source Code Pro |
+| 字号滑块 | 范围 8–24px，默认 13，步长 1 |
+| 行高滑块 | 范围 1.0–2.0，默认 1.2，步长 0.1 |
+| 预览区 | 实时渲染终端字体效果，使用当前主题配色 |
+
+设置存入 `localStorage` key `lumiterm_font`。xterm.js 字体设置通过 `terminal.options.fontFamily/fontSize/lineHeight` 实时更新，无需重启。
+
+---
+
+#### 快捷键分页
+
+分组展示所有可绑定快捷键，每行点击进入「等待按键」状态：
+
+**默认快捷键表:**
+
+| 分组 | 操作 | 默认按键 |
+|---|---|---|
+| 编辑 | 复制 | `Ctrl+C` |
+| 编辑 | 粘贴 | `Ctrl+V` |
+| 编辑 | 剪切 | `Ctrl+X` |
+| 标签页 | 新建标签页 | `Ctrl+T` |
+| 标签页 | 关闭标签页 | `Ctrl+W` |
+| 标签页 | 切换到下一个 | `Ctrl+Tab` |
+| 标签页 | 切换到上一个 | `Ctrl+Shift+Tab` |
+| 历史 | 搜索历史命令 | `Ctrl+R` |
+| 设置 | 打开设置 | `Ctrl+,` |
+
+**改绑流程:**
+1. 点击某行 → 该行变蓝色高亮，显示「请按下新快捷键…」
+2. 用户按下按键组合 → 检测是否与其他快捷键冲突
+3. 冲突 → 行变红，显示冲突提示，不保存
+4. 无冲突 → 立即保存，恢复正常显示
+5. 按 `ESC` → 取消改绑
+
+**「重置默认」按钮:** 恢复所有快捷键为上表默认值，弹出确认提示。
+
+---
+
+### shortcutsStore.ts（新建 Pinia Store）
+
+```ts
+interface ShortcutBinding {
+  action: string      // 操作 ID，如 'copy'、'new-tab'
+  key: string         // 如 'Ctrl+C'
+  isDefault: boolean
+}
+```
+
+存储：`localStorage` key `lumiterm_shortcuts`。
+
+**API:**
+
+| 方法 | 说明 |
+|---|---|
+| `getKey(action)` | 返回当前绑定的按键字符串 |
+| `setKey(action, key)` | 检测冲突后更新绑定 |
+| `hasConflict(key)` | 返回已使用该按键的 action，或 null |
+| `resetAll()` | 恢复所有默认绑定 |
+
+**快捷键拦截:** 在 `App.vue` 的 `keydown` 事件监听中，根据 `shortcutsStore` 动态匹配并执行对应操作。复制/粘贴/剪切在终端内通过 xterm.js selection API 实现（`terminal.getSelection()` / `terminal.paste()`）。
+
+---
+
+### 终端右键上下文菜单
+
+在 `TerminalPane.vue` 中监听 xterm.js 的 `onContextMenu` 事件（或 DOM `contextmenu` 事件），阻止系统默认菜单，显示自定义菜单：
+
+```
+┌─────────────────┐
+│  复制    Ctrl+C  │  ← 有选中文字时可用，否则置灰
+│  粘贴    Ctrl+V  │
+│  剪切    Ctrl+X  │  ← 有选中文字时可用，否则置灰
+└─────────────────┘
+```
+
+菜单使用 CSS 变量配色（修复现有右键菜单硬编码浅色的问题）。菜单位置跟随鼠标坐标，超出窗口边界时自动翻转。
+
+---
+
 ## Rust 后端新增命令
 
 `src-tauri/src/commands/` 新增：
@@ -251,11 +366,13 @@ async fn get_git_branch(path: String) -> Result<String, String>
 |---|---|
 | `src/components/InputBar.vue` | **新建** |
 | `src/components/HistorySearch.vue` | **新建** |
+| `src/components/SettingsModal.vue` | **新建** |
 | `src/stores/historyStore.ts` | **新建** |
-| `src/components/TerminalPane.vue` | 修改：集成 InputBar、HistorySearch、交互式模式检测、OSC 7 解析、fit 联动 |
+| `src/stores/shortcutsStore.ts` | **新建** |
+| `src/components/TerminalPane.vue` | 修改：集成 InputBar、HistorySearch、交互式模式检测、OSC 7 解析、fit 联动、右键菜单 |
 | `src/stores/themeStore.ts` | 修改：加入 Warp Dark，改为默认 |
-| `src/components/TabBar.vue` | 小改：间距/圆角微调（可选） |
-| `src/App.vue` | 修改：应用启动时调用 `historyStore.cleanup()` |
+| `src/components/TabBar.vue` | 修改：⚙ 按钮改为打开 SettingsModal；间距/圆角微调 |
+| `src/App.vue` | 修改：全局 keydown 监听（shortcutsStore）；启动时 `historyStore.cleanup()` |
 | `src-tauri/src/commands/pty.rs` | 修改：新增 `get_git_branch` 命令 |
 | `src-tauri/src/lib.rs` | 修改：注册新 Tauri 命令 |
 
@@ -274,7 +391,12 @@ async fn get_git_branch(path: String) -> Result<String, String>
 | HistorySearch 打开时 Ctrl+R | 关闭 HistorySearch（toggle） |
 | 历史为空时按 ↑ | 无操作，inputValue 不变 |
 | 相同命令连续执行 | historyStore.add 幂等：只更新 useCount 和 lastUsedAt，不新增重复条目 |
-| localStorage 不可用 | historyStore 降级为内存存储，不崩溃 |
+| localStorage 不可用 | historyStore/shortcutsStore 降级为内存存储，不崩溃 |
+| 快捷键冲突 | 行变红显示提示，不保存，用户需选择其他按键 |
+| 改绑复制/粘贴/剪切后右键菜单 | 右键菜单始终显示当前绑定的按键（从 shortcutsStore 读取） |
+| 无文字选中时复制/剪切 | 操作静默无效（不报错） |
+| 设置模态框打开时 Ctrl+, | 关闭模态框（toggle） |
+| 字体在系统中未安装 | xterm.js 自动 fallback 到 Consolas，字体下拉对应项加「(未安装)」提示 |
 
 ---
 
@@ -286,3 +408,5 @@ async fn get_git_branch(path: String) -> Result<String, String>
 - 不移除现有 5 个主题
 - 历史不跨设备同步（本地 localStorage 存储）
 - 历史搜索不做语义/AI 搜索，仅字符串包含匹配
+- 快捷键不支持多键序列（chord），只支持单次组合键
+- 不支持鼠标手势或触控板手势
