@@ -110,12 +110,6 @@ function handleKeydown(e: KeyboardEvent) {
     window.dispatchEvent(new CustomEvent('lumiterm:cut'));
     return;
   }
-  if (shortcutsStore.matchesEvent('history-search', e)) {
-    e.preventDefault();
-    window.dispatchEvent(new CustomEvent('lumiterm:history-search'));
-    return;
-  }
-
   // F2: rename active tab
   if (e.key === 'F2' && store.activeTabId) {
     e.preventDefault();
