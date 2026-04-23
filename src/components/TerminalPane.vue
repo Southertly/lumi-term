@@ -206,9 +206,20 @@ async function init(container: HTMLElement) {
     }).catch(() => {});
   });
 
-  // ── Resize observer ──
-  resizeObserver = new ResizeObserver(() => {
+  // ── Resize/padding observer ──
+  // Single applyPadding path: sets .xterm paddingBottom = InputBar height,
+  // then fits, then resizes PTY. Both container resize and InputBar height
+  // changes go through this function to avoid double-fit.
+  const xtermEl = container.querySelector('.xterm') as HTMLElement | null;
+  await nextTick(); // ensure InputBar is mounted before querying
+  const inputBarEl = inputBarRef.value?.$el as HTMLElement | null;
+  if (!inputBarEl) {
+    console.warn('[TerminalPane] inputBarEl not found after nextTick — xterm padding not set');
+  }
+  const applyPadding = () => {
     if (!isMounted) return;
+    const h = inputBarEl ? inputBarEl.offsetHeight : 0;
+    if (xtermEl) xtermEl.style.paddingBottom = h + 'px';
     fitAddon.fit();
     if (sessionId.value) {
       invoke('resize_pty_cmd', {
@@ -217,29 +228,10 @@ async function init(container: HTMLElement) {
         rows: terminal.rows,
       }).catch(() => {});
     }
-  });
+  };
+  resizeObserver = new ResizeObserver(applyPadding);
   resizeObserver.observe(container);
-
-  // ── InputBar height → xterm padding ──
-  // FitAddon computes rows from parentElement height minus .xterm padding.
-  // Setting paddingBottom on .xterm = InputBar height → correct row count.
-  await nextTick(); // ensure InputBar is mounted
-  const inputBarEl = inputBarRef.value?.$el as HTMLElement | null;
   if (inputBarEl) {
-    const applyPadding = () => {
-      if (!isMounted) return;
-      const h = inputBarEl.offsetHeight;
-      const xtermEl = container.querySelector('.xterm') as HTMLElement | null;
-      if (xtermEl) xtermEl.style.paddingBottom = h + 'px';
-      fitAddon.fit();
-      if (sessionId.value) {
-        invoke('resize_pty_cmd', {
-          sessionId: sessionId.value,
-          cols: terminal.cols,
-          rows: terminal.rows,
-        }).catch(() => {});
-      }
-    };
     inputBarObserver = new ResizeObserver(applyPadding);
     inputBarObserver.observe(inputBarEl);
   }
