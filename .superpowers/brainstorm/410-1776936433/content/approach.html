@@ -1,0 +1,135 @@
+<h2>Warp 风格改造 — 选择方案深度</h2>
+<p class="subtitle">三种方案，复杂度和效果各不相同</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1c1c1e;border-radius:8px;overflow:hidden;font-family:'Cascadia Code',monospace;font-size:11px;">
+        <!-- Titlebar -->
+        <div style="background:#111113;height:28px;display:flex;align-items:center;padding:0 12px;gap:6px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#febc2e;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#28c840;"></div>
+          <span style="color:#666;font-size:10px;margin-left:auto;margin-right:auto;">LumiTerm</span>
+        </div>
+        <!-- Tab bar -->
+        <div style="background:#111113;padding:4px 8px;display:flex;gap:6px;align-items:center;border-bottom:1px solid #2a2a2e;">
+          <div style="background:#2a2a2e;border-radius:6px;padding:4px 12px;color:#fff;font-size:10px;display:flex;align-items:center;gap:6px;">
+            <span style="color:#7aa2f7;">❯</span> PowerShell
+            <span style="color:#444;font-size:9px;">×</span>
+          </div>
+          <div style="background:#1c1c1e;border-radius:6px;padding:4px 12px;color:#666;font-size:10px;">cmd</div>
+          <span style="color:#555;margin-left:auto;font-size:14px;">+</span>
+        </div>
+        <!-- Terminal output (xterm.js unchanged) -->
+        <div style="background:#1c1c1e;padding:10px 12px;height:100px;color:#cdd6f4;">
+          <div><span style="color:#a6e3a1;">user@lumi</span><span style="color:#cdd6f4;"> ~/projects </span><span style="color:#89b4fa;">❯</span> <span>ls -la</span></div>
+          <div style="color:#6c7086;margin-top:4px;">drwxr-xr-x  5 user  160 Apr 23</div>
+          <div style="color:#6c7086;">-rw-r--r--  1 user  1.2K package.json</div>
+          <div style="color:#6c7086;">-rw-r--r--  1 user  4.8K src/</div>
+          <div style="margin-top:4px;"><span style="color:#a6e3a1;">user@lumi</span><span> ~/projects </span><span style="color:#89b4fa;">❯</span> <span class="cursor" style="background:#89b4fa;color:#1c1c1e;"> </span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · 视觉风格升级</h3>
+      <p>新配色（Warp 深黑调）、现代化标签栏、优化排版。xterm.js 保持不变，改动最小，1–2天完成。</p>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>优点</h4><ul><li>风险低，可快速上线</li><li>不改 PTY 架构</li></ul></div>
+        <div class="cons"><h4>局限</h4><ul><li>本质仍是传统终端</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1c1c1e;border-radius:8px;overflow:hidden;font-family:'Cascadia Code',monospace;font-size:11px;">
+        <!-- Titlebar -->
+        <div style="background:#111113;height:28px;display:flex;align-items:center;padding:0 12px;gap:6px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#febc2e;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#28c840;"></div>
+          <span style="color:#666;font-size:10px;margin-left:auto;margin-right:auto;">LumiTerm</span>
+        </div>
+        <!-- Tab bar -->
+        <div style="background:#111113;padding:4px 8px;display:flex;gap:6px;align-items:center;border-bottom:1px solid #2a2a2e;">
+          <div style="background:#2a2a2e;border-radius:6px;padding:4px 12px;color:#fff;font-size:10px;">❯ PowerShell</div>
+          <span style="color:#555;margin-left:auto;font-size:14px;">+</span>
+        </div>
+        <!-- Output area -->
+        <div style="background:#1c1c1e;padding:8px 12px;height:72px;color:#cdd6f4;overflow:hidden;">
+          <div style="color:#6c7086;">drwxr-xr-x  5 user  160 Apr 23</div>
+          <div style="color:#6c7086;">-rw-r--r--  1 user  1.2K package.json</div>
+          <div style="color:#6c7086;">-rw-r--r--  1 user  4.8K src/</div>
+        </div>
+        <!-- Warp-style input bar at bottom -->
+        <div style="background:#252528;border-top:1px solid #3a3a3e;padding:6px 10px;display:flex;align-items:center;gap:8px;">
+          <div style="color:#a6e3a1;font-size:10px;">~/projects</div>
+          <div style="color:#89b4fa;font-size:10px;">❯</div>
+          <div style="flex:1;background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:10px;">ls -la<span style="background:#89b4fa;color:#1c1c1e;"> </span></div>
+          <div style="color:#555;font-size:9px;">⌅ Enter</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 底部输入栏分离</h3>
+      <p>独立的 Warp 风格输入框固定在底部，显示当前目录。xterm.js 负责输出显示，3–5天实现。</p>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>优点</h4><ul><li>最接近 Warp 操作感</li><li>可加自动补全、历史</li></ul></div>
+        <div class="cons"><h4>局限</h4><ul><li>需拦截 PTY 输入流</li><li>交互式程序（vim等）需特殊处理</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1c1c1e;border-radius:8px;overflow:hidden;font-family:'Cascadia Code',monospace;font-size:11px;">
+        <!-- Titlebar -->
+        <div style="background:#111113;height:28px;display:flex;align-items:center;padding:0 12px;gap:6px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#febc2e;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#28c840;"></div>
+          <span style="color:#666;font-size:10px;margin-left:auto;margin-right:auto;">LumiTerm</span>
+        </div>
+        <!-- Tab bar -->
+        <div style="background:#111113;padding:4px 8px;display:flex;gap:6px;align-items:center;border-bottom:1px solid #2a2a2e;">
+          <div style="background:#2a2a2e;border-radius:6px;padding:4px 12px;color:#fff;font-size:10px;">❯ PowerShell</div>
+          <span style="color:#555;margin-left:auto;font-size:14px;">+</span>
+        </div>
+        <!-- Block 1 -->
+        <div style="padding:6px 10px;">
+          <div style="background:#252528;border:1px solid #3a3a3e;border-radius:6px;padding:6px 10px;margin-bottom:4px;">
+            <div style="color:#89b4fa;font-size:9px;margin-bottom:3px;">❯ ls -la</div>
+            <div style="color:#6c7086;font-size:9px;line-height:1.5;">drwxr-xr-x  5 user  160 Apr 23<br>-rw-r--r--  1 user  1.2K package.json<br><span style="color:#a6e3a1;">✓ exit 0</span></div>
+          </div>
+          <!-- Block 2 partial -->
+          <div style="background:#252528;border:1px solid #3a3a3e;border-radius:6px;padding:6px 10px;">
+            <div style="color:#89b4fa;font-size:9px;margin-bottom:3px;">❯ git status</div>
+            <div style="color:#6c7086;font-size:9px;">On branch master...</div>
+          </div>
+        </div>
+        <!-- Input bar -->
+        <div style="background:#252528;border-top:1px solid #3a3a3e;padding:5px 10px;display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <div style="color:#a6e3a1;font-size:9px;">~/projects</div>
+          <div style="color:#89b4fa;font-size:9px;">❯</div>
+          <div style="flex:1;background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#cdd6f4;font-size:9px;"><span style="background:#89b4fa;color:#1c1c1e;"> </span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · 完整 Block 输出系统</h3>
+      <p>每条命令的输出包在独立卡片里，可折叠/复制/拖拽。需要自建命令解析器，2–4周工程量。</p>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>优点</h4><ul><li>与 Warp 最接近</li><li>输出可结构化操作</li></ul></div>
+        <div class="cons"><h4>局限</h4><ul><li>需放弃 xterm.js 渲染</li><li>ANSI 兼容性需自行处理</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">推荐：<strong>B 方案</strong> — 能获得最直观的 Warp 操作感，同时保留 xterm.js 的完整终端兼容性。点击选择，或在终端告诉我你的想法。</p>

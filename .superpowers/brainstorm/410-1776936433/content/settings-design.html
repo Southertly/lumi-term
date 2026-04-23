@@ -1,0 +1,210 @@
+<h2>设置面板 — 完整设计预览</h2>
+<p class="subtitle">点击标签切换三个分页</p>
+
+<div style="display:flex;gap:8px;margin-bottom:12px;">
+  <button onclick="showTab('theme')" id="btn-theme"
+    style="padding:5px 14px;border-radius:5px;border:1px solid #5b9cf6;background:#5b9cf6;color:#fff;cursor:pointer;font-size:11px;">🎨 主题</button>
+  <button onclick="showTab('font')" id="btn-font"
+    style="padding:5px 14px;border-radius:5px;border:1px solid #3a3a3e;background:#252528;color:#999;cursor:pointer;font-size:11px;">🔤 字体</button>
+  <button onclick="showTab('shortcuts')" id="btn-shortcuts"
+    style="padding:5px 14px;border-radius:5px;border:1px solid #3a3a3e;background:#252528;color:#999;cursor:pointer;font-size:11px;">⌨️ 快捷键</button>
+</div>
+
+<!-- Theme tab -->
+<div id="view-theme">
+  <div class="mockup">
+    <div class="mockup-header">主题设置</div>
+    <div class="mockup-body" style="padding:0;">
+      <div style="background:#1e1e22;border:1px solid #3a3a3e;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;display:flex;height:240px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+        <!-- Left nav -->
+        <div style="width:120px;background:#111113;border-right:1px solid #2a2a2e;padding:12px 0;flex-shrink:0;">
+          <div style="padding:4px 12px;color:#6e6e73;font-size:9px;letter-spacing:0.8px;margin-bottom:6px;">SETTINGS</div>
+          <div style="padding:7px 10px;background:#2a2a2e;border-radius:5px;margin:0 6px 2px;color:#5b9cf6;font-size:11px;display:flex;align-items:center;gap:6px;">🎨 <span>主题</span></div>
+          <div style="padding:7px 10px;border-radius:5px;margin:0 6px 2px;color:#6e6e73;font-size:11px;display:flex;align-items:center;gap:6px;">🔤 <span>字体</span></div>
+          <div style="padding:7px 10px;border-radius:5px;margin:0 6px;color:#6e6e73;font-size:11px;display:flex;align-items:center;gap:6px;">⌨️ <span>快捷键</span></div>
+        </div>
+        <!-- Right content -->
+        <div style="flex:1;padding:16px;overflow-y:auto;">
+          <div style="color:#e8e8e8;font-size:13px;font-weight:600;margin-bottom:12px;">外观主题</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <!-- Warp Dark (active) -->
+            <div style="border:2px solid #5b9cf6;border-radius:8px;overflow:hidden;cursor:pointer;">
+              <div style="height:48px;background:linear-gradient(135deg,#111113 50%,#1c1c1e 50%);"></div>
+              <div style="background:#1e1e22;padding:5px 8px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:10px;color:#e8e8e8;">Warp Dark</span>
+                <span style="color:#5b9cf6;font-size:11px;">✓</span>
+              </div>
+            </div>
+            <!-- Catppuccin -->
+            <div style="border:1px solid #3a3a3e;border-radius:8px;overflow:hidden;cursor:pointer;">
+              <div style="height:48px;background:linear-gradient(135deg,#11111b 50%,#1e1e2e 50%);"></div>
+              <div style="background:#1e1e22;padding:5px 8px;">
+                <span style="font-size:10px;color:#6e6e73;">Catppuccin</span>
+              </div>
+            </div>
+            <!-- Dracula -->
+            <div style="border:1px solid #3a3a3e;border-radius:8px;overflow:hidden;cursor:pointer;">
+              <div style="height:48px;background:linear-gradient(135deg,#1e1f29 50%,#282a36 50%);"></div>
+              <div style="background:#1e1e22;padding:5px 8px;">
+                <span style="font-size:10px;color:#6e6e73;">Dracula</span>
+              </div>
+            </div>
+            <!-- Tokyo Night -->
+            <div style="border:1px solid #3a3a3e;border-radius:8px;overflow:hidden;cursor:pointer;">
+              <div style="height:48px;background:linear-gradient(135deg,#16161e 50%,#1a1b26 50%);"></div>
+              <div style="background:#1e1e22;padding:5px 8px;">
+                <span style="font-size:10px;color:#6e6e73;">Tokyo Night</span>
+              </div>
+            </div>
+            <!-- Nord -->
+            <div style="border:1px solid #3a3a3e;border-radius:8px;overflow:hidden;cursor:pointer;">
+              <div style="height:48px;background:linear-gradient(135deg,#2e3440 50%,#3b4252 50%);"></div>
+              <div style="background:#1e1e22;padding:5px 8px;">
+                <span style="font-size:10px;color:#6e6e73;">Nord</span>
+              </div>
+            </div>
+            <!-- Latte (light) -->
+            <div style="border:1px solid #3a3a3e;border-radius:8px;overflow:hidden;cursor:pointer;">
+              <div style="height:48px;background:linear-gradient(135deg,#dce0e8 50%,#eff1f5 50%);"></div>
+              <div style="background:#1e1e22;padding:5px 8px;">
+                <span style="font-size:10px;color:#6e6e73;">Latte</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Font tab -->
+<div id="view-font" style="display:none;">
+  <div class="mockup">
+    <div class="mockup-header">字体设置</div>
+    <div class="mockup-body" style="padding:0;">
+      <div style="background:#1e1e22;border:1px solid #3a3a3e;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;display:flex;height:240px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+        <!-- Left nav -->
+        <div style="width:120px;background:#111113;border-right:1px solid #2a2a2e;padding:12px 0;flex-shrink:0;">
+          <div style="padding:4px 12px;color:#6e6e73;font-size:9px;letter-spacing:0.8px;margin-bottom:6px;">SETTINGS</div>
+          <div style="padding:7px 10px;border-radius:5px;margin:0 6px 2px;color:#6e6e73;font-size:11px;display:flex;align-items:center;gap:6px;">🎨 <span>主题</span></div>
+          <div style="padding:7px 10px;background:#2a2a2e;border-radius:5px;margin:0 6px 2px;color:#5b9cf6;font-size:11px;display:flex;align-items:center;gap:6px;">🔤 <span>字体</span></div>
+          <div style="padding:7px 10px;border-radius:5px;margin:0 6px;color:#6e6e73;font-size:11px;display:flex;align-items:center;gap:6px;">⌨️ <span>快捷键</span></div>
+        </div>
+        <!-- Right content -->
+        <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;">
+          <div style="color:#e8e8e8;font-size:13px;font-weight:600;">字体设置</div>
+          <!-- Font family -->
+          <div>
+            <div style="color:#6e6e73;font-size:10px;margin-bottom:5px;">字体</div>
+            <select style="background:#252528;border:1px solid #3a3a3e;border-radius:5px;color:#e8e8e8;padding:5px 8px;font-size:11px;width:100%;outline:none;">
+              <option>Cascadia Code (默认)</option>
+              <option>JetBrains Mono</option>
+              <option>Fira Code</option>
+              <option>Consolas</option>
+              <option>SF Mono</option>
+              <option>Source Code Pro</option>
+            </select>
+          </div>
+          <!-- Font size -->
+          <div>
+            <div style="color:#6e6e73;font-size:10px;margin-bottom:5px;display:flex;justify-content:space-between;">
+              <span>字号</span><span style="color:#5b9cf6;">13px</span>
+            </div>
+            <input type="range" min="8" max="24" value="13"
+              style="width:100%;accent-color:#5b9cf6;background:#252528;height:3px;">
+            <div style="display:flex;justify-content:space-between;color:#4a4a4e;font-size:9px;margin-top:2px;"><span>8</span><span>24</span></div>
+          </div>
+          <!-- Line height -->
+          <div>
+            <div style="color:#6e6e73;font-size:10px;margin-bottom:5px;display:flex;justify-content:space-between;">
+              <span>行高</span><span style="color:#5b9cf6;">1.2</span>
+            </div>
+            <input type="range" min="10" max="20" value="12"
+              style="width:100%;accent-color:#5b9cf6;background:#252528;height:3px;">
+            <div style="display:flex;justify-content:space-between;color:#4a4a4e;font-size:9px;margin-top:2px;"><span>1.0</span><span>2.0</span></div>
+          </div>
+          <!-- Preview -->
+          <div style="background:#1c1c1e;border-radius:5px;padding:8px 10px;font-family:'Cascadia Code',monospace;font-size:13px;color:#e8e8e8;border:1px solid #2a2a2e;">
+            <span style="color:#a6e3a1;">user</span><span style="color:#cdd6f4;"> ~/projects </span><span style="color:#5b9cf6;">❯</span><span> echo 预览文字 Preview</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shortcuts tab -->
+<div id="view-shortcuts" style="display:none;">
+  <div class="mockup">
+    <div class="mockup-header">快捷键设置（点击任意行可改绑）</div>
+    <div class="mockup-body" style="padding:0;">
+      <div style="background:#1e1e22;border:1px solid #3a3a3e;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;display:flex;height:240px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+        <!-- Left nav -->
+        <div style="width:120px;background:#111113;border-right:1px solid #2a2a2e;padding:12px 0;flex-shrink:0;">
+          <div style="padding:4px 12px;color:#6e6e73;font-size:9px;letter-spacing:0.8px;margin-bottom:6px;">SETTINGS</div>
+          <div style="padding:7px 10px;border-radius:5px;margin:0 6px 2px;color:#6e6e73;font-size:11px;display:flex;align-items:center;gap:6px;">🎨 <span>主题</span></div>
+          <div style="padding:7px 10px;border-radius:5px;margin:0 6px 2px;color:#6e6e73;font-size:11px;display:flex;align-items:center;gap:6px;">🔤 <span>字体</span></div>
+          <div style="padding:7px 10px;background:#2a2a2e;border-radius:5px;margin:0 6px;color:#5b9cf6;font-size:11px;display:flex;align-items:center;gap:6px;">⌨️ <span>快捷键</span></div>
+        </div>
+        <!-- Right content: shortcut list -->
+        <div style="flex:1;padding:12px;overflow-y:auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span style="color:#e8e8e8;font-size:13px;font-weight:600;">快捷键</span>
+            <span style="color:#6e6e73;font-size:9px;cursor:pointer;border:1px solid #3a3a3e;border-radius:4px;padding:2px 7px;">↩ 重置默认</span>
+          </div>
+          <!-- Table header -->
+          <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:4px 6px;margin-bottom:2px;">
+            <span style="color:#4a4a4e;font-size:9px;letter-spacing:0.5px;">操作</span>
+            <span style="color:#4a4a4e;font-size:9px;letter-spacing:0.5px;">按键</span>
+          </div>
+          <!-- Shortcut rows -->
+          <div style="display:flex;flex-direction:column;gap:1px;">
+            <!-- Group: 编辑 -->
+            <div style="color:#6e6e73;font-size:8px;letter-spacing:0.5px;padding:4px 6px 2px;">编辑</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 6px;border-radius:4px;background:#252528;align-items:center;cursor:pointer;" onmouseover="this.style.background='#2a2a2e'" onmouseout="this.style.background='#252528'">
+              <span style="color:#e8e8e8;font-size:10px;">复制</span>
+              <span style="background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#5b9cf6;font-size:9px;font-family:monospace;">Ctrl+C</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 6px;border-radius:4px;align-items:center;cursor:pointer;" onmouseover="this.style.background='#252528'" onmouseout="this.style.background='transparent'">
+              <span style="color:#e8e8e8;font-size:10px;">粘贴</span>
+              <span style="background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#5b9cf6;font-size:9px;font-family:monospace;">Ctrl+V</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 6px;border-radius:4px;align-items:center;cursor:pointer;" onmouseover="this.style.background='#252528'" onmouseout="this.style.background='transparent'">
+              <span style="color:#e8e8e8;font-size:10px;">剪切</span>
+              <span style="background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#5b9cf6;font-size:9px;font-family:monospace;">Ctrl+X</span>
+            </div>
+            <!-- Group: 标签页 -->
+            <div style="color:#6e6e73;font-size:8px;letter-spacing:0.5px;padding:6px 6px 2px;">标签页</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 6px;border-radius:4px;align-items:center;cursor:pointer;" onmouseover="this.style.background='#252528'" onmouseout="this.style.background='transparent'">
+              <span style="color:#e8e8e8;font-size:10px;">新建标签页</span>
+              <span style="background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#5b9cf6;font-size:9px;font-family:monospace;">Ctrl+T</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 6px;border-radius:4px;align-items:center;cursor:pointer;" onmouseover="this.style.background='#252528'" onmouseout="this.style.background='transparent'">
+              <span style="color:#e8e8e8;font-size:10px;">关闭标签页</span>
+              <span style="background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#5b9cf6;font-size:9px;font-family:monospace;">Ctrl+W</span>
+            </div>
+            <!-- Group: 历史 -->
+            <div style="color:#6e6e73;font-size:8px;letter-spacing:0.5px;padding:6px 6px 2px;">历史</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 6px;border-radius:4px;align-items:center;cursor:pointer;" onmouseover="this.style.background='#252528'" onmouseout="this.style.background='transparent'">
+              <span style="color:#e8e8e8;font-size:10px;">搜索历史命令</span>
+              <span style="background:#1c1c1e;border:1px solid #3a3a3e;border-radius:4px;padding:2px 6px;color:#5b9cf6;font-size:9px;font-family:monospace;">Ctrl+R</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top:8px;">点击任意快捷键行 → 进入"按下新按键"状态 → 检测冲突 → 保存。右键终端菜单固定包含复制/粘贴/剪切，不可移除。</p>
+</div>
+
+<script>
+function showTab(name) {
+  ['theme','font','shortcuts'].forEach(t => {
+    document.getElementById('view-'+t).style.display = t===name?'block':'none';
+    var btn = document.getElementById('btn-'+t);
+    btn.style.background = t===name?'#5b9cf6':'#252528';
+    btn.style.color = t===name?'#fff':'#999';
+    btn.style.borderColor = t===name?'#5b9cf6':'#3a3a3e';
+  });
+}
+</script>

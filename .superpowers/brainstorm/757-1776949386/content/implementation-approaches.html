@@ -1,0 +1,56 @@
+<h2>实现方案对比</h2>
+<p class="subtitle">三种方式都对接 PowerShell PTY，区别在于改动量和功能完整性</p>
+
+<div class="options">
+
+  <div class="option" data-choice="f" onclick="toggleSelect(this)">
+    <div class="letter">F</div>
+    <div class="content">
+      <h3>最小改动：InputBar 内嵌 + 自动弹出历史</h3>
+      <p>
+        把现有 InputBar 从 flex 底部改成 <strong>绝对定位覆盖在 xterm 容器底部</strong>，让 xterm 占满全高。
+        输入时自动展示内联历史列表（不用 Ctrl+R），默认显示 10 条，实时过滤。
+        改动约 80 行，1–2 天完成。
+      </p>
+      <div style="margin-top:8px; font-size:11px; color:#3fb950;">✓ 改动最小，稳定性高 &nbsp; ✓ 所有 Shell 通用 &nbsp; ✓ Frecency 保留</div>
+      <div style="font-size:11px; color:#8b949e; margin-top:3px;">△ InputBar 在技术上仍是 HTML 叠层，不是 xterm 内部</div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="g" onclick="toggleSelect(this)">
+    <div class="letter">G</div>
+    <div class="content">
+      <h3>完整重构：移除 InputBar，改用原生 xterm 输入</h3>
+      <p>
+        彻底移除 InputBar，键盘直接输入 xterm → PTY → PowerShell。
+        用 xterm.js 的 <strong>virtual scroll buffer 写入</strong>技术，在 xterm 内部渲染历史列表（ANSI 序列）。
+        输入时历史出现在 xterm 画布内，真正"在终端里"。
+        改动约 300 行，3–5 天，技术风险中等。
+      </p>
+      <div style="margin-top:8px; font-size:11px; color:#3fb950;">✓ 输入真正在 xterm 内 &nbsp; ✓ Shell 原生 Tab 补全可用</div>
+      <div style="font-size:11px; color:#ff7b72; margin-top:3px;">✗ ANSI 注入复杂，interactive app（vim/htop）需要特殊处理</div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="h" onclick="toggleSelect(this)">
+    <div class="letter">H</div>
+    <div class="content">
+      <h3>Warp 完整复刻：Block 终端架构</h3>
+      <p>
+        完全替换 xterm.js 为 <strong>自定义 Vue 命令块渲染器</strong>。每条命令 + 输出 = 一个 block，底部是 InputBar + 内联历史。
+        对接 PowerShell PTY，输出用 ansi-to-html 解析渲染。
+        改动约 1000+ 行，2–3 周，技术风险高（interactive apps 如 vim 不可用）。
+      </p>
+      <div style="margin-top:8px; font-size:11px; color:#3fb950;">✓ 最像 Warp，可做命令块复制/折叠</div>
+      <div style="font-size:11px; color:#ff7b72; margin-top:3px;">✗ vim/htop 等 interactive app 无法使用 &nbsp; ✗ 工作量巨大</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px; padding:12px 16px; background:rgba(88,166,255,0.08); border:1px solid rgba(88,166,255,0.2); border-radius:8px; font-size:12px; color:#8b949e;">
+  <strong style="color:#e6edf3;">推荐：方案 F</strong><br>
+  视觉效果与你截图里一致（输入在终端内，历史列表自动展示），
+  且对接 PowerShell 的架构完全不变，vim/htop 等 interactive app 继续正常工作。
+  方案 G/H 的"更纯粹"收益远不如它们带来的技术风险。
+</div>

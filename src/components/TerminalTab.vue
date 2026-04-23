@@ -1,111 +1,63 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-import { Channel } from '@tauri-apps/api/core';
-import { initTerminal, type TerminalInstance } from '../utils/xtermInitializer';
-import { useTerminalStore, type ShellType } from '../stores/terminalStore';
+import { computed } from 'vue';
+import { useTerminalStore } from '../stores/terminalStore';
+import TerminalPane from './TerminalPane.vue';
+import SplitPane from './SplitPane.vue';
 
-const props = defineProps<{ tabId: string; shellType: ShellType; active: boolean }>();
+const props = defineProps<{ tabId: string; active: boolean }>();
 const store = useTerminalStore();
 
-const terminalRef = ref<HTMLElement | null>(null);
-let instance: TerminalInstance | null = null;
-let resizeObserver: ResizeObserver | null = null;
-let sessionId: string | null = null;
-let isMounted = true;
+const tab = computed(() => store.tabs.find((t) => t.id === props.tabId));
+const hasSplit = computed(() => (tab.value?.panes.length ?? 0) > 1);
 
-const shellCommands: Record<ShellType, string> = {
-  powershell: 'powershell.exe',
-  cmd: 'cmd.exe',
-  wsl2: 'wsl.exe',
-};
-
-async function init(container: HTMLElement) {
-  instance = initTerminal(container);
-  const { terminal, fitAddon } = instance;
-
-  const channel = new Channel<number[]>();
-  channel.onmessage = (data) => terminal.write(new Uint8Array(data));
-
-  try {
-    sessionId = await invoke<string>('create_pty', {
-      shell: shellCommands[props.shellType],
-      cols: terminal.cols,
-      rows: terminal.rows,
-      channel,
-    });
-    store.setSessionId(props.tabId, sessionId);
-  } catch (e) {
-    terminal.write(`\r\nFailed to start shell: ${e}\r\n`);
-    return;
-  }
-
-  terminal.attachCustomKeyEventHandler((e) => {
-    if (e.ctrlKey && (e.key === 'w' || e.key === 't' || e.key === 'Tab')) {
-      return false; // let window keydown handler take it
-    }
-    return true;
-  });
-
-  terminal.onData((data) => {
-    if (!sessionId) return;
-    invoke('write_pty_cmd', {
-      sessionId: sessionId,
-      data: Array.from(new TextEncoder().encode(data)),
-    }).catch(() => {});
-  });
-
-  resizeObserver = new ResizeObserver(() => {
-    if (!isMounted) return;
-    fitAddon.fit();
-    if (sessionId) {
-      invoke('resize_pty_cmd', {
-        sessionId: sessionId,
-        cols: terminal.cols,
-        rows: terminal.rows,
-      }).catch(() => {});
-    }
-  });
-  resizeObserver.observe(container);
+function onSplitResize(sizes: [number, number]) {
+  if (!tab.value) return;
+  store.updatePaneSizes(tab.value.id, sizes);
 }
-
-watch(
-  () => props.active,
-  (active) => {
-    if (active && instance) {
-      // Wait for DOM layout to stabilize before fitting
-      setTimeout(() => instance!.fitAddon.fit(), 50);
-    }
-  }
-);
-
-onMounted(() => {
-  if (terminalRef.value) init(terminalRef.value);
-});
-
-onUnmounted(() => {
-  isMounted = false;
-  resizeObserver?.disconnect();
-  if (sessionId) {
-    invoke('close_pty_cmd', { sessionId }).catch(() => {});
-  }
-  instance?.dispose();
-});
 </script>
 
 <template>
-  <div
-    ref="terminalRef"
-    class="terminal-container"
-    :style="{ display: active ? 'block' : 'none' }"
-  />
+  <div v-if="tab" class="tab-content" :style="{ display: active ? 'flex' : 'none' }">
+    <TerminalPane
+      v-if="!hasSplit"
+      :pane-id="tab.panes[0].id"
+      :tab-id="tab.id"
+      :shell-type="tab.panes[0].shellType"
+      :active="active"
+      :pane-active="true"
+    />
+    <SplitPane
+      v-else
+      :direction="tab.splitDirection!"
+      :sizes="[tab.panes[0].size, tab.panes[1].size]"
+      @resize="onSplitResize"
+    >
+      <template #pane-0>
+        <TerminalPane
+          :pane-id="tab.panes[0].id"
+          :tab-id="tab.id"
+          :shell-type="tab.panes[0].shellType"
+          :active="active"
+          :pane-active="tab.activePaneId === tab.panes[0].id"
+        />
+      </template>
+      <template #pane-1>
+        <TerminalPane
+          :pane-id="tab.panes[1].id"
+          :tab-id="tab.id"
+          :shell-type="tab.panes[1].shellType"
+          :active="active"
+          :pane-active="tab.activePaneId === tab.panes[1].id"
+        />
+      </template>
+    </SplitPane>
+  </div>
 </template>
 
 <style scoped>
-.terminal-container {
+.tab-content {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #1e1e2e;
 }
 </style>

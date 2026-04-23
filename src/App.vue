@@ -6,12 +6,10 @@ import TerminalTab from './components/TerminalTab.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import { useTerminalStore } from './stores/terminalStore';
 import { useThemeStore } from './stores/themeStore';
-import { useHistoryStore } from './stores/historyStore';
 import { useShortcutsStore } from './stores/shortcutsStore';
 
 const store = useTerminalStore();
 const themeStore = useThemeStore();
-const historyStore = useHistoryStore();
 const shortcutsStore = useShortcutsStore();
 const showSettings = ref(false);
 const onOpenSettings = () => { showSettings.value = true; };
@@ -212,7 +210,6 @@ function handleKeydown(e: KeyboardEvent) {
 
 onMounted(async () => {
   store.restoreTabs();
-  historyStore.cleanup();
   window.addEventListener('lumiterm:open-settings', onOpenSettings);
   window.addEventListener('keydown', handleKeydown);
 

@@ -1,0 +1,108 @@
+<h2>方案 F 详细设计</h2>
+<p class="subtitle">确认每个细节，然后开始实现</p>
+
+<div class="section">
+  <h3>整体布局变化</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">改动前（现状）</div>
+      <div class="mockup-body" style="padding:0; display:flex; flex-direction:column; height:220px;">
+        <div style="flex:1; background:#1c1c1e; padding:10px 12px; font-family:monospace; font-size:11px; color:#e8e8e8; min-height:0;">
+          <div style="color:#a6e3a1;">E:\claudecode</div>
+          <div>PS&gt; git status</div>
+          <div style="color:#a6e3a1;">On branch main</div>
+        </div>
+        <!-- Separate flex section below -->
+        <div style="background:#252528; border-top:1px solid #2a2a2e; padding:6px 12px; flex-shrink:0;">
+          <div style="font-size:9px; color:#5b9cf6; margin-bottom:3px;">~/claudecode | main</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="color:#5b9cf6; font-size:13px;">❯</span>
+            <div style="flex:1; background:#1c1c1e; border:1px solid #2a2a2e; border-radius:4px; padding:3px 8px; font-family:monospace; font-size:10px; color:#6e6e73;">在此输入…</div>
+            <span style="font-size:9px; color:#6e6e73;">↑↓ 历史</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">改动后（方案 F）</div>
+      <div class="mockup-body" style="padding:0; position:relative; height:220px; background:#1c1c1e; overflow:hidden;">
+        <!-- xterm takes full height -->
+        <div style="padding:10px 12px; font-family:monospace; font-size:11px; color:#e8e8e8; height:100%; box-sizing:border-box;">
+          <div style="color:#a6e3a1;">E:\claudecode</div>
+          <div>PS&gt; git status</div>
+          <div style="color:#a6e3a1;">On branch main</div>
+        </div>
+        <!-- InputBar absolute positioned inside terminal -->
+        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(28,28,30,0.96); border-top:1px solid #2a2a2e; padding:8px 12px;">
+          <div style="font-size:9px; color:#5b9cf6; opacity:0.75; margin-bottom:4px;">~/claudecode | main</div>
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+            <span style="color:#5b9cf6; font-size:14px;">❯</span>
+            <span style="font-family:monospace; font-size:11px; color:#e8e8e8;">cd <span style="background:#5b9cf6; color:#1c1c1e; padding:0 1px;">▌</span></span>
+          </div>
+          <!-- Inline history list -->
+          <div style="border-top:1px solid #2a2a2e; padding-top:6px;">
+            <div style="font-size:9px; color:#6e6e73; margin-bottom:4px;">历史 10 条 · 输入过滤</div>
+            <div style="background:rgba(91,156,246,0.12); border-left:2px solid #5b9cf6; padding:3px 8px; font-family:monospace; font-size:10px; color:#5b9cf6; margin-bottom:2px;">❯ cd E:\claudecode\lumi-term\</div>
+            <div style="padding:3px 8px; font-family:monospace; font-size:10px; color:#6e6e73; margin-bottom:2px;">❯ cd e:\</div>
+            <div style="padding:3px 8px; font-family:monospace; font-size:10px; color:#6e6e73;">❯ cd .\lumi-term\</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>历史列表行为</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12px;">
+    <div style="background:rgba(255,255,255,0.04); border-radius:6px; padding:12px;">
+      <div style="color:#e8e8e8; font-weight:bold; margin-bottom:8px;">触发时机</div>
+      <div style="color:#8b949e; line-height:1.8;">
+        · 聚焦输入框 → 显示 10 条最近历史<br>
+        · 输入任意字符 → 实时过滤匹配<br>
+        · 清空输入 → 恢复显示 10 条<br>
+        · Escape / 执行命令 → 关闭列表
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04); border-radius:6px; padding:12px;">
+      <div style="color:#e8e8e8; font-weight:bold; margin-bottom:8px;">键盘操作</div>
+      <div style="color:#8b949e; line-height:1.8;">
+        · ↑↓ 在历史列表中移动<br>
+        · Enter — 执行选中命令<br>
+        · Tab — 填入输入框（不执行）<br>
+        · Escape — 关闭列表，保留输入
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04); border-radius:6px; padding:12px;">
+      <div style="color:#e8e8e8; font-weight:bold; margin-bottom:8px;">列表排序</div>
+      <div style="color:#8b949e; line-height:1.8;">
+        · 无过滤词：最近使用时间排序<br>
+        · 有过滤词：Frecency 评分排序<br>
+        · 最多显示 10 条
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04); border-radius:6px; padding:12px;">
+      <div style="color:#e8e8e8; font-weight:bold; margin-bottom:8px;">移除</div>
+      <div style="color:#8b949e; line-height:1.8;">
+        · 移除 Ctrl+R 历史搜索浮层<br>
+        · 移除 "↑↓ 历史" 提示文字<br>
+        · ↑↓ 键专门用于列表导航
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>代码改动范围</h3>
+  <div style="font-size:12px; color:#8b949e; line-height:2;">
+    <span style="background:rgba(255,123,114,0.15); color:#ff7b72; padding:1px 6px; border-radius:3px; font-family:monospace; font-size:11px;">InputBar.vue</span> — 移除 flex 布局，改为 absolute 定位；移除独立输入框边框；添加内联历史列表 UI<br>
+    <span style="background:rgba(255,123,114,0.15); color:#ff7b72; padding:1px 6px; border-radius:3px; font-family:monospace; font-size:11px;">TerminalPane.vue</span> — 移除 terminal-container 的 flex:1，让它 height:100%；移除 HistorySearch 引用<br>
+    <span style="background:rgba(163,230,153,0.15); color:#3fb950; padding:1px 6px; border-radius:3px; font-family:monospace; font-size:11px;">HistorySearch.vue</span> — 删除（功能合并进 InputBar）<br>
+    <span style="color:#6e6e73;">其余文件不需要改动</span>
+  </div>
+</div>
+
+<div style="margin-top:4px; padding:12px 16px; background:rgba(163,230,153,0.08); border:1px solid rgba(163,230,153,0.2); border-radius:8px; font-size:12px; color:#8b949e;">
+  <strong style="color:#e8e8e8;">这个设计看起来对吗？</strong><br>
+  如果没问题，我会写设计文档并开始实现计划。有任何要调整的细节请告诉我。
+</div>
