@@ -8,7 +8,6 @@ import { useThemeStore } from '../stores/themeStore';
 import { useFontStore } from '../stores/fontStore';
 import { useShortcutsStore } from '../stores/shortcutsStore';
 import InputBar from './InputBar.vue';
-import HistorySearch from './HistorySearch.vue';
 
 const props = defineProps<{
   paneId: string;
@@ -45,6 +44,7 @@ const terminalRef = ref<HTMLElement | null>(null);
 const inputBarRef = ref<InstanceType<typeof InputBar> | null>(null);
 let instance: TerminalInstance | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let inputBarObserver: ResizeObserver | null = null;
 let isMounted = true;
 let contextMenuCleanup: (() => void) | null = null;
 
@@ -53,7 +53,6 @@ const sessionId = ref<string | null>(null);
 const isInteractiveMode = ref(false);
 const cwd = ref('');
 const gitBranch = ref('');
-const showHistorySearch = ref(false);
 
 // ── Right-click context menu ──
 const contextMenu = ref<{ x: number; y: number } | null>(null);
@@ -131,7 +130,6 @@ async function init(container: HTMLElement) {
     // Interactive mode detection (alternate screen buffer)
     if (text.includes('\x1b[?1049h')) {
       isInteractiveMode.value = true;
-      showHistorySearch.value = false;
       nextTick(() => { terminal.focus(); fitAddon.fit(); });
     }
     if (text.includes('\x1b[?1049l')) {
@@ -222,6 +220,30 @@ async function init(container: HTMLElement) {
   });
   resizeObserver.observe(container);
 
+  // ── InputBar height → xterm padding ──
+  // FitAddon computes rows from parentElement height minus .xterm padding.
+  // Setting paddingBottom on .xterm = InputBar height → correct row count.
+  await nextTick(); // ensure InputBar is mounted
+  const inputBarEl = inputBarRef.value?.$el as HTMLElement | null;
+  if (inputBarEl) {
+    const applyPadding = () => {
+      if (!isMounted) return;
+      const h = inputBarEl.offsetHeight;
+      const xtermEl = container.querySelector('.xterm') as HTMLElement | null;
+      if (xtermEl) xtermEl.style.paddingBottom = h + 'px';
+      fitAddon.fit();
+      if (sessionId.value) {
+        invoke('resize_pty_cmd', {
+          sessionId: sessionId.value,
+          cols: terminal.cols,
+          rows: terminal.rows,
+        }).catch(() => {});
+      }
+    };
+    inputBarObserver = new ResizeObserver(applyPadding);
+    inputBarObserver.observe(inputBarEl);
+  }
+
   // Auto-focus InputBar after init
   nextTick(() => inputBarRef.value?.focus());
 }
@@ -269,11 +291,6 @@ function handleFocusPane(e: Event) {
 function handleTerminalCopy() { if (props.active && props.paneActive) handleCopy(); }
 function handleTerminalPaste() { if (props.active && props.paneActive) handlePaste(); }
 function handleTerminalCut() { if (props.active && props.paneActive) handleCut(); }
-function handleOpenHistorySearch() {
-  if (props.active && props.paneActive && !isInteractiveMode.value) {
-    showHistorySearch.value = true;
-  }
-}
 
 onMounted(() => {
   if (terminalRef.value) init(terminalRef.value);
@@ -281,7 +298,6 @@ onMounted(() => {
   window.addEventListener('lumiterm:copy', handleTerminalCopy);
   window.addEventListener('lumiterm:paste', handleTerminalPaste);
   window.addEventListener('lumiterm:cut', handleTerminalCut);
-  window.addEventListener('lumiterm:history-search', handleOpenHistorySearch);
   document.addEventListener('click', handleGlobalClick);
 });
 
@@ -291,10 +307,10 @@ onUnmounted(() => {
   window.removeEventListener('lumiterm:copy', handleTerminalCopy);
   window.removeEventListener('lumiterm:paste', handleTerminalPaste);
   window.removeEventListener('lumiterm:cut', handleTerminalCut);
-  window.removeEventListener('lumiterm:history-search', handleOpenHistorySearch);
   document.removeEventListener('click', handleGlobalClick);
   contextMenuCleanup?.();
   resizeObserver?.disconnect();
+  inputBarObserver?.disconnect();
   if (sessionId.value) invoke('close_pty_cmd', { sessionId: sessionId.value }).catch(() => {});
   instance?.dispose();
 });
@@ -303,7 +319,7 @@ onUnmounted(() => {
 <template>
   <div
     class="pane-wrapper"
-    :style="{ display: active ? 'flex' : 'none', flexDirection: 'column' }"
+    :style="{ display: active ? 'block' : 'none' }"
   >
     <button
       v-if="showCloseButton"
@@ -319,19 +335,12 @@ onUnmounted(() => {
       :style="{ background: themeStore.getCurrentTheme().terminal.background }"
     />
 
-    <HistorySearch
-      :visible="showHistorySearch && !isInteractiveMode"
-      @select="(cmd) => { inputBarRef?.fillCommand(cmd); showHistorySearch = false; }"
-      @close="showHistorySearch = false"
-    />
-
     <InputBar
       ref="inputBarRef"
       :session-id="sessionId"
       :is-interactive="isInteractiveMode"
       :cwd="cwd"
       :git-branch="gitBranch"
-      @open-history-search="showHistorySearch = !showHistorySearch"
     />
 
     <!-- Right-click context menu -->
@@ -376,9 +385,9 @@ onUnmounted(() => {
 }
 
 .terminal-container {
-  flex: 1;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
-  min-height: 0;
 }
 
 .terminal-container.pane-active {
