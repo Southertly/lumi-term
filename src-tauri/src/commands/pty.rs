@@ -60,3 +60,21 @@ pub fn toggle_maximize(window: tauri::Window) -> Result<(), String> {
         window.maximize().map_err(|e| e.to_string())
     }
 }
+
+#[tauri::command]
+pub async fn get_git_branch(path: String) -> String {
+    let result = tokio::task::spawn_blocking(move || {
+        std::process::Command::new("git")
+            .args(["rev-parse", "--abbrev-ref", "HEAD"])
+            .current_dir(&path)
+            .output()
+    })
+    .await;
+
+    match result {
+        Ok(Ok(output)) if output.status.success() => {
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        }
+        _ => String::new(),
+    }
+}
