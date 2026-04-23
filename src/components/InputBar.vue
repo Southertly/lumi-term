@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { useHistoryStore } from '../stores/historyStore';
 
@@ -10,16 +10,27 @@ const props = defineProps<{
   gitBranch: string;
 }>();
 
-const emit = defineEmits<{
-  openHistorySearch: [];
-}>();
-
 const historyStore = useHistoryStore();
 const inputValue = ref('');
-const historyIndex = ref(-1);
 const inputRef = ref<HTMLInputElement | null>(null);
 
-// When interactive mode ends, auto-focus the input bar
+// ── Inline history list state ──
+const showHistory = ref(false);
+const selectedHistoryIndex = ref(-1);
+let blurTimer: ReturnType<typeof setTimeout> | null = null;
+
+const historyList = computed(() => {
+  const q = inputValue.value.trim();
+  if (!q) return historyStore.list().slice(0, 10);
+  return historyStore.search(q).slice(0, 10);
+});
+
+// Reset selection whenever the filtered list changes
+watch(historyList, () => {
+  selectedHistoryIndex.value = -1;
+});
+
+// When interactive mode ends, focus the input bar
 watch(() => props.isInteractive, (interactive) => {
   if (!interactive) {
     nextTick(() => inputRef.value?.focus());
@@ -28,7 +39,6 @@ watch(() => props.isInteractive, (interactive) => {
 
 function displayCwd(cwd: string): string {
   if (!cwd) return '';
-  // Replace Windows-style home dir with ~
   const home = cwd.match(/^[A-Z]:\\Users\\[^\\]+/i)?.[0] ?? '';
   if (home && cwd.startsWith(home)) {
     return '~' + cwd.slice(home.length).replace(/\\/g, '/');
@@ -36,37 +46,67 @@ function displayCwd(cwd: string): string {
   return cwd.replace(/\\/g, '/');
 }
 
+function handleFocus() {
+  if (blurTimer !== null) {
+    clearTimeout(blurTimer);
+    blurTimer = null;
+  }
+  showHistory.value = true;
+  selectedHistoryIndex.value = -1;
+}
+
+function handleBlur() {
+  blurTimer = setTimeout(() => {
+    showHistory.value = false;
+    blurTimer = null;
+  }, 150);
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter') {
     e.preventDefault();
+    if (selectedHistoryIndex.value >= 0 && historyList.value[selectedHistoryIndex.value]) {
+      inputValue.value = historyList.value[selectedHistoryIndex.value].command;
+      selectedHistoryIndex.value = -1;
+      showHistory.value = false;
+    }
     sendCommand();
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    navigateHistory(-1);
+    if (!showHistory.value) {
+      showHistory.value = true;
+      selectedHistoryIndex.value = 0;
+    } else if (historyList.value.length > 0) {
+      selectedHistoryIndex.value = Math.max(0,
+        selectedHistoryIndex.value <= 0 ? 0 : selectedHistoryIndex.value - 1
+      );
+    }
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
-    navigateHistory(1);
-  } else if (e.ctrlKey && e.key === 'r') {
+    if (showHistory.value && historyList.value.length > 0) {
+      const next = selectedHistoryIndex.value + 1;
+      selectedHistoryIndex.value = next >= historyList.value.length ? -1 : next;
+    }
+  } else if (e.key === 'Tab') {
     e.preventDefault();
-    emit('openHistorySearch');
+    if (showHistory.value && selectedHistoryIndex.value >= 0 && historyList.value[selectedHistoryIndex.value]) {
+      inputValue.value = historyList.value[selectedHistoryIndex.value].command;
+      selectedHistoryIndex.value = -1;
+    }
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    showHistory.value = false;
+    selectedHistoryIndex.value = -1;
   }
 }
 
-function navigateHistory(direction: -1 | 1) {
-  const list = historyStore.list();
-  if (list.length === 0) return;
-
-  // Down from empty input does nothing
-  if (direction === 1 && historyIndex.value === -1) return;
-
-  if (historyIndex.value === -1 && direction === -1) {
-    historyIndex.value = 0;
-  } else {
-    const next = historyIndex.value + direction;
-    historyIndex.value = Math.max(-1, Math.min(list.length - 1, next));
-  }
-
-  inputValue.value = historyIndex.value === -1 ? '' : list[historyIndex.value].command;
+function selectHistoryItem(command: string) {
+  // Called by mousedown on a history item
+  showHistory.value = false;
+  inputValue.value = command;
+  selectedHistoryIndex.value = -1;
+  nextTick(() => inputRef.value?.focus());
+  sendCommand();
 }
 
 function sendCommand() {
@@ -80,12 +120,13 @@ function sendCommand() {
 
   historyStore.add(cmd);
   inputValue.value = '';
-  historyIndex.value = -1;
+  selectedHistoryIndex.value = -1;
+  showHistory.value = false;
 }
 
 function fillCommand(command: string) {
   inputValue.value = command;
-  historyIndex.value = -1;
+  selectedHistoryIndex.value = -1;
   nextTick(() => inputRef.value?.focus());
 }
 
@@ -115,27 +156,42 @@ defineExpose({ fillCommand, focus: () => inputRef.value?.focus() });
         spellcheck="false"
         :disabled="!sessionId"
         @keydown="handleKeydown"
+        @focus="handleFocus"
+        @blur="handleBlur"
       />
-      <span class="input-hints">↑↓ 历史&nbsp;&nbsp;⌅ 发送</span>
+    </div>
+    <div v-if="showHistory && historyList.length > 0" class="history-list">
+      <div class="history-header">历史 {{ historyList.length }} 条 · 输入过滤</div>
+      <div
+        v-for="(entry, idx) in historyList"
+        :key="entry.command"
+        class="history-item"
+        :class="{ selected: idx === selectedHistoryIndex }"
+        @mousedown.prevent="selectHistoryItem(entry.command)"
+        @mouseover="selectedHistoryIndex = idx"
+      >
+        <span class="history-prompt">❯</span>
+        <span class="history-command">{{ entry.command }}</span>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .input-bar {
-  background: var(--ui-bg-lighter);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(28, 28, 30, 0.96);
   border-top: 1px solid var(--ui-border);
   padding: 0 14px;
-  flex-shrink: 0;
-  overflow: hidden;
-  transition: height 0.15s ease, opacity 0.15s ease;
-  height: 52px;
-  opacity: 1;
+  z-index: 10;
+  transition: opacity 0.15s ease;
 }
 
 .input-bar.hidden {
-  height: 0;
-  opacity: 0;
+  display: none;
 }
 
 .input-context {
@@ -166,7 +222,7 @@ defineExpose({ fillCommand, focus: () => inputRef.value?.focus() });
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 7px;
+  padding-bottom: 8px;
 }
 
 .input-prompt {
@@ -179,29 +235,63 @@ defineExpose({ fillCommand, focus: () => inputRef.value?.focus() });
 
 .input-field {
   flex: 1;
-  background: var(--ui-bg-light);
-  border: 1px solid var(--ui-border);
-  border-radius: 5px;
-  padding: 5px 10px;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
   color: var(--ui-fg);
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
-  transition: border-color 0.1s;
-}
-
-.input-field:focus {
-  border-color: var(--ui-accent);
 }
 
 .input-field:disabled {
   opacity: 0.4;
 }
 
-.input-hints {
-  color: var(--ui-fg-muted);
+.history-list {
+  border-top: 1px solid var(--ui-border);
+  padding: 4px 0 6px;
+}
+
+.history-header {
   font-size: 9px;
-  white-space: nowrap;
+  color: var(--ui-fg-muted);
+  padding-bottom: 4px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  cursor: pointer;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  border-left: 2px solid transparent;
+}
+
+.history-item:hover,
+.history-item.selected {
+  background: rgba(91, 156, 246, 0.12);
+  border-left-color: var(--ui-accent);
+}
+
+.history-prompt {
+  color: var(--ui-accent);
+  font-size: 10px;
   flex-shrink: 0;
+}
+
+.history-command {
+  flex: 1;
+  color: var(--ui-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item.selected .history-command {
+  color: var(--ui-accent);
 }
 </style>
