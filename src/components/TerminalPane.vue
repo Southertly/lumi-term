@@ -7,7 +7,6 @@ import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 import { useThemeStore } from '../stores/themeStore';
 import { useFontStore } from '../stores/fontStore';
 import { useShortcutsStore } from '../stores/shortcutsStore';
-import InputBar from './InputBar.vue';
 
 const props = defineProps<{
   paneId: string;
@@ -41,18 +40,13 @@ function handleClose() {
 
 // ── Terminal refs ──
 const terminalRef = ref<HTMLElement | null>(null);
-const inputBarRef = ref<InstanceType<typeof InputBar> | null>(null);
 let instance: TerminalInstance | null = null;
 let resizeObserver: ResizeObserver | null = null;
-let inputBarObserver: ResizeObserver | null = null;
 let isMounted = true;
 let contextMenuCleanup: (() => void) | null = null;
 
-// ── Warp-style state ──
+// ── Session state ──
 const sessionId = ref<string | null>(null);
-const isInteractiveMode = ref(false);
-const cwd = ref('');
-const gitBranch = ref('');
 
 // ── Right-click context menu ──
 const contextMenu = ref<{ x: number; y: number } | null>(null);
@@ -74,11 +68,7 @@ async function handleCopy() {
 async function handlePaste() {
   const text = await navigator.clipboard.readText().catch(() => '');
   if (text) {
-    if (isInteractiveMode.value && sessionId.value) {
-      instance?.terminal.paste(text);
-    } else {
-      inputBarRef.value?.fillCommand(text);
-    }
+    instance?.terminal.paste(text);
   }
   closeContextMenu();
 }
@@ -87,30 +77,12 @@ function handleCut() {
   handleCopy(); // terminal cut = copy (no delete)
 }
 
-// ── Git branch fetch ──
-async function fetchGitBranch(path: string) {
-  if (!path) { gitBranch.value = ''; return; }
-  try {
-    gitBranch.value = await invoke<string>('get_git_branch', { path });
-  } catch {
-    gitBranch.value = '';
-  }
-}
-
 // ── Shell commands ──
 const shellCommands: Record<ShellType, string> = {
   powershell: 'powershell.exe',
   cmd: 'cmd.exe',
   wsl2: 'wsl.exe',
 };
-
-// ── OSC 7 parser ──
-function parseOsc7(text: string): string | null {
-  // Matches \x1b]7;file://hostname/path\x07  or  \x1b]7;file://hostname/path\x1b\\
-  const m = text.match(/\x1b\]7;file:\/\/[^/]*([^\x07\x1b]*)(?:\x07|\x1b\\)/);
-  if (!m || m[1].length > 4096) return null;
-  try { return decodeURIComponent(m[1]); } catch { return m[1]; }
-}
 
 // ── Main init ──
 async function init(container: HTMLElement) {
@@ -125,25 +97,6 @@ async function init(container: HTMLElement) {
   const channel = new Channel<number[]>();
   channel.onmessage = (rawData) => {
     const bytes = new Uint8Array(rawData);
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-
-    // Interactive mode detection (alternate screen buffer)
-    if (text.includes('\x1b[?1049h')) {
-      isInteractiveMode.value = true;
-      nextTick(() => { terminal.focus(); fitAddon.fit(); });
-    }
-    if (text.includes('\x1b[?1049l')) {
-      isInteractiveMode.value = false;
-      nextTick(() => { inputBarRef.value?.focus(); fitAddon.fit(); });
-    }
-
-    // OSC 7: current working directory
-    const newCwd = parseOsc7(text);
-    if (newCwd && newCwd !== cwd.value) {
-      cwd.value = newCwd;
-      fetchGitBranch(newCwd);
-    }
-
     terminal.write(bytes);
   };
 
@@ -165,10 +118,6 @@ async function init(container: HTMLElement) {
   // ── Focus tracking ──
   terminal.element?.addEventListener('focus', () => {
     store.setActivePane(props.tabId, props.paneId);
-    // In normal mode, redirect focus back to InputBar
-    if (!isInteractiveMode.value) {
-      nextTick(() => inputBarRef.value?.focus());
-    }
   });
 
   // ── Right-click menu ──
@@ -183,43 +132,26 @@ async function init(container: HTMLElement) {
   // ── Keyboard filter ──
   terminal.attachCustomKeyEventHandler((e) => {
     if (e.type !== 'keydown') return true;
-
-    // In interactive mode: pass through everything except app-level shortcuts
-    if (isInteractiveMode.value) {
-      if (e.ctrlKey && !e.shiftKey && (e.key === 't' || e.key === 'w')) return false;
-      if (e.ctrlKey && e.key === 'Tab') return false;
-      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'E' || e.key === 'W')) return false;
-      if (e.key === 'F2') return false;
-      return true;
-    }
-
-    // In normal mode: block all keyboard input to xterm (InputBar handles it)
-    return false;
+    // Block app-level shortcuts from reaching xterm/PTY
+    if (e.ctrlKey && !e.shiftKey && (e.key === 't' || e.key === 'w')) return false;
+    if (e.ctrlKey && e.key === 'Tab') return false;
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'E' || e.key === 'W')) return false;
+    if (e.key === 'F2') return false;
+    return true;
   });
 
-  // ── PTY write (interactive mode only) ──
+  // ── PTY write ──
   terminal.onData((data) => {
-    if (!sessionId.value || !isInteractiveMode.value) return;
+    if (!sessionId.value) return;
     invoke('write_pty_cmd', {
       sessionId: sessionId.value,
       data: Array.from(new TextEncoder().encode(data)),
     }).catch(() => {});
   });
 
-  // ── Resize/padding observer ──
-  // Single applyPadding path: sets .xterm paddingBottom = InputBar height,
-  // then fits, then resizes PTY. Both container resize and InputBar height
-  // changes go through this function to avoid double-fit.
-  const xtermEl = container.querySelector('.xterm') as HTMLElement | null;
-  await nextTick(); // ensure InputBar is mounted before querying
-  const inputBarEl = inputBarRef.value?.$el as HTMLElement | null;
-  if (!inputBarEl) {
-    console.warn('[TerminalPane] inputBarEl not found after nextTick — xterm padding not set');
-  }
-  const applyPadding = () => {
+  // ── Resize observer ──
+  resizeObserver = new ResizeObserver(() => {
     if (!isMounted) return;
-    const h = inputBarEl ? inputBarEl.offsetHeight : 0;
-    if (xtermEl) xtermEl.style.paddingBottom = h + 'px';
     fitAddon.fit();
     if (sessionId.value) {
       invoke('resize_pty_cmd', {
@@ -228,16 +160,10 @@ async function init(container: HTMLElement) {
         rows: terminal.rows,
       }).catch(() => {});
     }
-  };
-  resizeObserver = new ResizeObserver(applyPadding);
+  });
   resizeObserver.observe(container);
-  if (inputBarEl) {
-    inputBarObserver = new ResizeObserver(applyPadding);
-    inputBarObserver.observe(inputBarEl);
-  }
 
-  // Auto-focus InputBar after init
-  nextTick(() => inputBarRef.value?.focus());
+  nextTick(() => terminal.focus());
 }
 
 // ── Watchers ──
@@ -260,7 +186,7 @@ watch(
     if (tabActive && paneActive && instance) {
       setTimeout(() => {
         instance!.fitAddon.fit();
-        if (!isInteractiveMode.value) inputBarRef.value?.focus();
+        instance!.terminal.focus();
       }, 50);
     }
   }
@@ -274,8 +200,7 @@ function handleGlobalClick() {
 function handleFocusPane(e: Event) {
   const { tabId, paneId } = (e as CustomEvent).detail;
   if (tabId === props.tabId && paneId === props.paneId && instance) {
-    if (isInteractiveMode.value) instance.terminal.focus();
-    else inputBarRef.value?.focus();
+    instance.terminal.focus();
   }
 }
 
@@ -302,7 +227,6 @@ onUnmounted(() => {
   document.removeEventListener('click', handleGlobalClick);
   contextMenuCleanup?.();
   resizeObserver?.disconnect();
-  inputBarObserver?.disconnect();
   if (sessionId.value) invoke('close_pty_cmd', { sessionId: sessionId.value }).catch(() => {});
   instance?.dispose();
 });
@@ -325,14 +249,6 @@ onUnmounted(() => {
       class="terminal-container"
       :class="{ 'pane-active': paneActive }"
       :style="{ background: themeStore.getCurrentTheme().terminal.background }"
-    />
-
-    <InputBar
-      ref="inputBarRef"
-      :session-id="sessionId"
-      :is-interactive="isInteractiveMode"
-      :cwd="cwd"
-      :git-branch="gitBranch"
     />
 
     <!-- Right-click context menu -->
