@@ -33,6 +33,17 @@ pub fn create_pty_store() -> PtyStore {
     Arc::new(Mutex::new(HashMap::new()))
 }
 
+fn get_last_cwd() -> Option<String> {
+    let temp = std::env::var("TEMP").ok()?;
+    let path = std::path::Path::new(&temp).join("lumiterm_cwd.txt");
+    let cwd = std::fs::read_to_string(path).ok()?.trim().to_string();
+    if !cwd.is_empty() && std::path::Path::new(&cwd).is_dir() {
+        Some(cwd)
+    } else {
+        None
+    }
+}
+
 pub fn spawn_shell(
     store: PtyStore,
     session_id: String,
@@ -61,10 +72,21 @@ pub fn spawn_shell(
             "-NoLogo",
             "-NoExit",
             "-Command",
-            "try { Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView } catch {}",
+            "try { Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView } catch {}; \
+             $global:_lf = [IO.Path]::Combine($env:TEMP, 'lumiterm_cwd.txt'); \
+             $global:_op = $function:prompt; \
+             $function:prompt = { \
+               try { (Get-Location).Path | Set-Content $global:_lf -NoNewline } catch {}; \
+               if ($global:_op) { & $global:_op } else { 'PS ' + $executionContext.SessionState.Path.CurrentLocation + '> ' } \
+             }",
         ]);
     }
     cmd.env("TERM", "xterm-256color");
+
+    // Restore last working directory for all shell types
+    if let Some(cwd) = get_last_cwd() {
+        cmd.cwd(&cwd);
+    }
 
     pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
 
