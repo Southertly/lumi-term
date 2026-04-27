@@ -1,8 +1,26 @@
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::ipc::Channel;
+
+static HAS_PWSH: OnceLock<bool> = OnceLock::new();
+
+pub fn prewarm_shell_detection() {
+    let _ = has_pwsh();
+}
+
+fn has_pwsh() -> bool {
+    *HAS_PWSH.get_or_init(|| {
+        std::process::Command::new("pwsh.exe")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    })
+}
 
 pub struct PtySession {
     writer: Arc<Mutex<Box<dyn Write + Send>>>,
@@ -28,15 +46,22 @@ pub fn spawn_shell(
         .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
         .map_err(|e| e.to_string())?;
 
-    let mut cmd = CommandBuilder::new(&shell);
-    if shell.to_lowercase().contains("cmd") {
+    // Prefer pwsh.exe (PowerShell 7+, ships with PSReadLine 2.2+) over powershell.exe (5.1)
+    let resolved_shell = if shell.to_lowercase() == "powershell.exe" {
+        if has_pwsh() { "pwsh.exe".to_string() } else { shell.clone() }
+    } else {
+        shell.clone()
+    };
+
+    let mut cmd = CommandBuilder::new(&resolved_shell);
+    if resolved_shell.to_lowercase().contains("cmd") {
         cmd.args(["/c", "chcp 65001 >nul && cmd"]);
-    } else if shell.to_lowercase().contains("powershell") {
+    } else if resolved_shell.to_lowercase().contains("powershell") || resolved_shell.to_lowercase().contains("pwsh") {
         cmd.args([
             "-NoLogo",
             "-NoExit",
             "-Command",
-            "Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView",
+            "try { Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView } catch {}",
         ]);
     }
     cmd.env("TERM", "xterm-256color");
@@ -84,7 +109,7 @@ pub fn resize_pty(store: &PtyStore, session_id: &str, cols: u16, rows: u16) -> R
         let session = store.get(session_id).ok_or("session not found")?;
         session.master.clone()
     };
-    let mut master_guard = master.lock().unwrap();
+    let master_guard = master.lock().unwrap();
     master_guard
         .resize(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
         .map_err(|e| e.to_string())

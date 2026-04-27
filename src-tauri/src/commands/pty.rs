@@ -48,6 +48,11 @@ pub fn close_app(store: State<PtyStore>, app: tauri::AppHandle) -> Result<(), St
 }
 
 #[tauri::command]
+pub fn drag_window(window: tauri::Window) -> Result<(), String> {
+    window.start_dragging().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn minimize_window(window: tauri::Window) -> Result<(), String> {
     window.minimize().map_err(|e| e.to_string())
 }

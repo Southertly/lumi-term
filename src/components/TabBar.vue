@@ -591,12 +591,12 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 .dropdown {
   position: fixed;
   margin-top: 36px;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
+  background: var(--ui-menu-bg);
+  border: 1px solid var(--ui-menu-border);
   border-radius: 8px;
   overflow: hidden;
   min-width: 160px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
   z-index: 1000;
 }
 .dropdown-item {
@@ -606,18 +606,18 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
   transition: background 0.1s ease;
   color: var(--ui-fg);
 }
-.dropdown-item:hover { background: var(--ui-border); }
+.dropdown-item:hover { background: var(--ui-menu-hover); }
 .item-icon { font-size: 14px; width: 18px; text-align: center; }
 .item-label { flex: 1; }
 .item-hint { font-size: 11px; color: var(--ui-fg-muted); }
 
 .context-menu {
   position: fixed;
-  background: var(--ui-bg-lighter);
-  border: 1px solid var(--ui-border);
+  background: var(--ui-menu-bg);
+  border: 1px solid var(--ui-menu-border);
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-  min-width: 160px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.07);
+  min-width: 180px;
   z-index: 2000;
   padding: 4px 0;
 }
@@ -634,7 +634,7 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 }
 
 .context-menu-item:hover:not(.disabled) {
-  background: var(--ui-hover);
+  background: var(--ui-menu-hover);
 }
 
 .context-menu-item.disabled {
@@ -644,7 +644,8 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 
 .context-menu-separator {
   height: 1px;
-  background: var(--ui-border);
+  background: var(--ui-menu-border);
+  opacity: 0.5;
   margin: 4px 8px;
 }
 
@@ -669,16 +670,16 @@ function getTabStyle(tabId: string, index: number): Record<string, string> {
 
 .color-picker {
   position: fixed;
-  background: var(--ui-bg);
+  background: var(--ui-menu-bg);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--ui-border);
+  border: 1px solid var(--ui-menu-border);
   border-radius: 8px;
   padding: 8px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   z-index: 2000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
 .color-option {

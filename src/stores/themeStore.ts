@@ -9,6 +9,9 @@ export interface AppTheme {
     bg: string;
     bgLight: string;
     bgLighter: string;
+    menuBg: string;      // 弹出菜单背景（高对比度）
+    menuBorder: string;  // 菜单边框（更亮）
+    menuHover: string;   // 菜单 hover 行
     fg: string;
     fgMuted: string;
     accent: string;
@@ -27,12 +30,15 @@ const themes: AppTheme[] = [
     ui: {
       bg: '#111113',
       bgLight: '#1c1c1e',
-      bgLighter: '#252528',
+      bgLighter: '#6a6a74',
+      menuBg: '#2a2a2e',
+      menuBorder: '#a0a0a8',
+      menuHover: '#3e3e44',
       fg: '#e8e8e8',
-      fgMuted: '#6e6e73',
+      fgMuted: '#c0c0c8',
       accent: '#5b9cf6',
-      border: '#2a2a2e',
-      hover: '#3a3a3e',
+      border: '#808088',
+      hover: '#787884',
     },
     terminal: {
       background: '#1c1c1e',
@@ -54,9 +60,10 @@ const themes: AppTheme[] = [
     name: 'catppuccin-mocha',
     label: 'Catppuccin Mocha',
     ui: {
-      bg: '#181825', bgLight: '#1e1e2e', bgLighter: '#262637',
-      fg: '#cdd6f4', fgMuted: '#6c7086', accent: '#89b4fa',
-      border: '#313244', hover: '#45475a',
+      bg: '#181825', bgLight: '#1e1e2e', bgLighter: '#45456a',
+      menuBg: '#2a2a3e', menuBorder: '#7c7fa8', menuHover: '#3d3d5c',
+      fg: '#cdd6f4', fgMuted: '#9194a7', accent: '#89b4fa',
+      border: '#62628a', hover: '#55578a',
     },
     terminal: {
       background: '#1e1e2e', foreground: '#cdd6f4', cursor: '#f5e0dc',
@@ -73,6 +80,7 @@ const themes: AppTheme[] = [
     label: 'Catppuccin Latte',
     ui: {
       bg: '#dce0e8', bgLight: '#eff1f5', bgLighter: '#e6e9ef',
+      menuBg: '#ffffff', menuBorder: '#8c90a0', menuHover: '#e0e4f0',
       fg: '#4c4f69', fgMuted: '#9ca0b0', accent: '#1e66f5',
       border: '#bcc0cc', hover: '#acb0be',
     },
@@ -91,7 +99,8 @@ const themes: AppTheme[] = [
     label: 'Dracula',
     ui: {
       bg: '#1e1f29', bgLight: '#282a36', bgLighter: '#343746',
-      fg: '#f8f8f2', fgMuted: '#6272a4', accent: '#bd93f9',
+      menuBg: '#363848', menuBorder: '#8890b8', menuHover: '#44475a',
+      fg: '#f8f8f2', fgMuted: '#8090c4', accent: '#bd93f9',
       border: '#44475a', hover: '#505461',
     },
     terminal: {
@@ -108,9 +117,10 @@ const themes: AppTheme[] = [
     name: 'tokyo-night',
     label: 'Tokyo Night',
     ui: {
-      bg: '#1a1b26', bgLight: '#1a1b26', bgLighter: '#24283b',
-      fg: '#c0caf5', fgMuted: '#565f89', accent: '#7aa2f7',
-      border: '#292e42', hover: '#3b4261',
+      bg: '#1a1b26', bgLight: '#1f2035', bgLighter: '#3a4070',
+      menuBg: '#2a2d47', menuBorder: '#8090c8', menuHover: '#3a4060',
+      fg: '#c0caf5', fgMuted: '#8891bb', accent: '#7aa2f7',
+      border: '#525888', hover: '#4b527a',
     },
     terminal: {
       background: '#1a1b26', foreground: '#c0caf5', cursor: '#c0caf5',
@@ -126,9 +136,10 @@ const themes: AppTheme[] = [
     name: 'nord',
     label: 'Nord',
     ui: {
-      bg: '#2e3440', bgLight: '#2e3440', bgLighter: '#3b4252',
-      fg: '#eceff4', fgMuted: '#d8dee9', accent: '#88c0d0',
-      border: '#3b4252', hover: '#434c5e',
+      bg: '#2e3440', bgLight: '#353c4a', bgLighter: '#5a6680',
+      menuBg: '#434c5e', menuBorder: '#8898b8', menuHover: '#4c566a',
+      fg: '#eceff4', fgMuted: '#aab4c4', accent: '#88c0d0',
+      border: '#6e7c90', hover: '#606e80',
     },
     terminal: {
       background: '#2e3440', foreground: '#d8dee9', cursor: '#eceff4',

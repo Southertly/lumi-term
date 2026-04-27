@@ -218,7 +218,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
 .settings-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.72);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -231,18 +231,18 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
   max-width: 90vw;
   height: 420px;
   max-height: 80vh;
-  background: var(--ui-bg-lighter);
-  border: 1px solid var(--ui-border);
+  background: var(--ui-menu-bg);
+  border: 1px solid var(--ui-menu-border);
   border-radius: 10px;
   display: flex;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.07);
 }
 
 .settings-nav {
   width: 130px;
-  background: var(--ui-bg);
-  border-right: 1px solid var(--ui-border);
+  background: rgba(0,0,0,0.15);
+  border-right: 1px solid var(--ui-menu-border);
   padding: 16px 0;
   flex-shrink: 0;
 }
@@ -259,19 +259,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
   padding: 8px 10px;
   margin: 0 6px 2px;
   border-radius: 5px;
-  color: var(--ui-fg-muted);
+  color: var(--ui-fg);
   font-size: 12px;
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
 .nav-item:hover {
-  background: var(--ui-hover);
+  background: var(--ui-menu-hover);
   color: var(--ui-fg);
 }
 
 .nav-item.active {
-  background: var(--ui-border);
+  background: var(--ui-menu-hover);
   color: var(--ui-accent);
 }
 
@@ -296,7 +296,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
 }
 
 .modal-close:hover {
-  background: var(--ui-hover);
+  background: var(--ui-menu-hover);
   color: var(--ui-fg);
 }
 
@@ -424,7 +424,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
   transition: background 0.1s;
 }
 
-.shortcut-row:hover { background: var(--ui-hover); }
+.shortcut-row:hover { background: var(--ui-menu-hover); }
 .shortcut-row.rebinding { background: color-mix(in srgb, var(--ui-accent) 12%, transparent); }
 .shortcut-row.error { background: color-mix(in srgb, #ff6b6b 12%, transparent); }
 

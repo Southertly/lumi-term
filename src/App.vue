@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed, watchEffect } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import TabBar from './components/TabBar.vue';
+import { getCurrentWindow } from '@tauri-apps/api/window';import TabBar from './components/TabBar.vue';
 import TerminalTab from './components/TerminalTab.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import { useTerminalStore } from './stores/terminalStore';
@@ -20,6 +20,9 @@ const uiVars = computed(() => {
     '--ui-bg': ui.bg,
     '--ui-bg-light': ui.bgLight,
     '--ui-bg-lighter': ui.bgLighter,
+    '--ui-menu-bg': ui.menuBg,
+    '--ui-menu-border': ui.menuBorder,
+    '--ui-menu-hover': ui.menuHover,
     '--ui-fg': ui.fg,
     '--ui-fg-muted': ui.fgMuted,
     '--ui-accent': ui.accent,
@@ -28,7 +31,21 @@ const uiVars = computed(() => {
   };
 });
 
+watchEffect(() => {
+  const rootStyle = document.documentElement.style;
+  Object.entries(uiVars.value).forEach(([key, value]) => {
+    rootStyle.setProperty(key, value);
+  });
+});
+
 let unlistenResize: (() => void) | null = null;
+
+async function startDrag(e: MouseEvent) {
+  if (e.button !== 0) return;
+  const target = e.target as HTMLElement;
+  if (target.closest('[data-tauri-no-drag]')) return;
+  invoke('drag_window').catch((err) => console.error('[drag] error:', err));
+}
 
 function closeApp() {
   invoke('close_app').catch((err) => console.error('[App] close_app failed:', err));
@@ -46,7 +63,6 @@ async function toggleMaximize() {
 }
 
 async function updateMaximizedState() {
-  const { getCurrentWindow } = await import('@tauri-apps/api/window');
   isMaximized.value = await getCurrentWindow().isMaximized();
 }
 
@@ -213,7 +229,6 @@ onMounted(async () => {
   window.addEventListener('lumiterm:open-settings', onOpenSettings);
   window.addEventListener('keydown', handleKeydown);
 
-  const { getCurrentWindow } = await import('@tauri-apps/api/window');
   await updateMaximizedState();
   unlistenResize = await getCurrentWindow().listen('tauri://resize', updateMaximizedState);
 });
@@ -226,10 +241,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-container" :style="uiVars">
-    <div class="titlebar" data-tauri-drag-region>
+  <div class="app-container" :style="uiVars" data-tauri-drag-region @mousedown="startDrag">
+    <div class="titlebar">
       <div class="titlebar-title">LumiTerm</div>
-      <div class="window-controls">
+      <div class="window-controls" data-tauri-no-drag>
         <button class="control-btn minimize-btn" @click="minimizeWindow">—</button>
         <button class="control-btn maximize-btn" @click="toggleMaximize">
           {{ isMaximized ? '❐' : '⬜' }}
@@ -237,8 +252,8 @@ onUnmounted(() => {
         <button class="control-btn close-btn" @click="closeApp">✕</button>
       </div>
     </div>
-    <TabBar />
-    <div class="terminal-wrapper">
+    <TabBar data-tauri-no-drag />
+    <div class="terminal-wrapper" data-tauri-no-drag>
       <TerminalTab
         v-for="tab in store.tabs"
         :key="tab.id"

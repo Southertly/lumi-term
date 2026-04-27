@@ -346,12 +346,13 @@ onUnmounted(() => {
 .terminal-ctx-menu {
   position: fixed;
   z-index: 9999;
-  background: var(--ui-bg-lighter);
-  border: 1px solid var(--ui-border);
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--ui-menu-bg) 72%, #000 28%);
+  border: 1px solid color-mix(in srgb, var(--ui-menu-border) 82%, #fff 18%);
+  border-radius: 8px;
   padding: 4px 0;
   min-width: 140px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px) saturate(120%);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255,255,255,0.14);
   font-family: system-ui, sans-serif;
   font-size: 12px;
 }
@@ -367,7 +368,7 @@ onUnmounted(() => {
 }
 
 .ctx-item:hover:not(.disabled) {
-  background: var(--ui-hover);
+  background: var(--ui-menu-hover);
 }
 
 .ctx-item.disabled {
