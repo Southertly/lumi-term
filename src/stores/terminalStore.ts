@@ -108,7 +108,7 @@ export const useTerminalStore = defineStore('terminal', () => {
 
   const tabsForCurrentWorkspace = computed(() => {
     if (!currentWorkspacePath.value) return tabs.value;
-    return tabs.value.filter((tab) => (tab.cwd ?? currentWorkspacePath.value) === currentWorkspacePath.value);
+    return tabs.value.filter((tab) => tab.cwd === currentWorkspacePath.value);
   });
 
   const addRecentWorkspace = (path: string) => {
@@ -134,6 +134,12 @@ export const useTerminalStore = defineStore('terminal', () => {
     if (!normalized) return;
     currentWorkspacePath.value = normalized;
     addRecentWorkspace(normalized);
+
+    const activeTabInWorkspace = activeTab.value?.cwd === normalized;
+    if (!activeTabInWorkspace) {
+      const firstWorkspaceTab = tabs.value.find((tab) => tab.cwd === normalized);
+      if (firstWorkspaceTab) activeTabId.value = firstWorkspaceTab.id;
+    }
   }
 
   function setSidebarCollapsed(collapsed: boolean) {

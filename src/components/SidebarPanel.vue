@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoke } from '@tauri-apps/api/core';
 import { computed, ref } from 'vue';
 import { useTerminalStore, type ShellType, type Tab } from '../stores/terminalStore';
 
@@ -62,6 +63,11 @@ const closeSession = (event: MouseEvent | KeyboardEvent, tab: Tab) => {
   event.stopPropagation();
   if (!confirm(`关闭 ${tab.title}？`)) return;
   store.removeTab(tab.id);
+  if (store.tabs.length === 0) {
+    setTimeout(() => {
+      invoke('close_app').catch((err) => console.error('[SidebarPanel] close_app failed:', err));
+    }, 100);
+  }
 };
 
 const getSessionSubtitle = (tab: Tab) => {
@@ -76,13 +82,19 @@ const getSessionSubtitle = (tab: Tab) => {
     <button
       class="collapse-toggle"
       :title="store.sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'"
+      :aria-label="store.sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'"
       @click="toggleSidebar"
     >
       {{ store.sidebarCollapsed ? '›' : '‹' }}
     </button>
 
     <div class="workspace-section">
-      <button class="workspace-button" :title="workspacePathLabel" @click="toggleWorkspaceMenu">
+      <button
+        class="workspace-button"
+        :title="workspacePathLabel"
+        :aria-label="`切换工作目录：${workspacePathLabel}`"
+        @click="toggleWorkspaceMenu"
+      >
         <span class="workspace-icon">📁</span>
         <span v-if="!store.sidebarCollapsed" class="workspace-text">
           <span class="workspace-name">{{ workspaceName }}</span>
@@ -93,13 +105,19 @@ const getSessionSubtitle = (tab: Tab) => {
 
       <div v-if="workspaceMenuOpen && !store.sidebarCollapsed" class="workspace-menu">
         <form class="workspace-form" @submit.prevent="setWorkspaceFromInput">
-          <input v-model="workspaceInput" class="workspace-input" placeholder="输入工作目录路径" />
+          <input
+            v-model="workspaceInput"
+            class="workspace-input"
+            placeholder="输入工作目录路径"
+            aria-label="工作目录路径"
+          />
           <button class="workspace-submit" type="submit">切换</button>
         </form>
         <button
           v-for="path in store.recentWorkspacePaths"
           :key="path"
           class="workspace-history-item"
+          :aria-label="`切换到工作目录 ${path}`"
           @click="selectWorkspace(path)"
         >
           <span>{{ path }}</span>
@@ -109,7 +127,7 @@ const getSessionSubtitle = (tab: Tab) => {
 
     <div v-if="!store.sidebarCollapsed" class="section-title-row">
       <span class="section-title">Sessions</span>
-      <button class="new-session-primary" @click="createSession()">New</button>
+      <button class="new-session-primary" aria-label="新建 PowerShell session" @click="createSession()">New</button>
     </div>
 
     <div class="session-list">
@@ -123,6 +141,7 @@ const getSessionSubtitle = (tab: Tab) => {
         <button
           type="button"
           class="session-select"
+          :aria-label="`切换到 ${tab.title}`"
           @click="store.switchTab(tab.id)"
         >
           <span class="session-icon">{{ iconMap[tab.shellType] }}</span>
@@ -140,18 +159,26 @@ const getSessionSubtitle = (tab: Tab) => {
           type="button"
           class="session-close"
           :aria-label="`关闭 ${tab.title}`"
+          :title="`关闭 ${tab.title}`"
           @click="closeSession($event, tab)"
         >×</button>
       </div>
     </div>
 
     <div class="sidebar-footer">
-      <button v-if="store.sidebarCollapsed" class="icon-action" title="新建 PowerShell session" @click="createSession()">＋</button>
+      <button
+        v-if="store.sidebarCollapsed"
+        class="icon-action"
+        title="新建 PowerShell session"
+        aria-label="新建 PowerShell session"
+        @click="createSession()"
+      >＋</button>
       <template v-else>
         <button
           v-for="shell in shells"
           :key="shell.type"
           class="shell-action"
+          :aria-label="`新建 ${shell.label} session`"
           @click="createSession(shell.type)"
         >
           <span>{{ shell.icon }}</span>
