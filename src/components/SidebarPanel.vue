@@ -24,9 +24,22 @@ const workspaceName = computed(() => {
   return normalized.split('/').filter(Boolean).pop() ?? normalized;
 });
 
-const activeWorkspacePath = computed(() => store.currentWorkspacePath ?? '');
+const activeWorkspacePath = computed<string | undefined>(() => store.currentWorkspacePath ?? undefined);
+const workspacePathLabel = computed(() => activeWorkspacePath.value ?? '未选择工作目录');
 
 const sessionTabs = computed(() => store.tabsForCurrentWorkspace);
+
+const toggleWorkspaceMenu = () => {
+  if (store.sidebarCollapsed) return;
+  workspaceMenuOpen.value = !workspaceMenuOpen.value;
+};
+
+const toggleSidebar = () => {
+  if (!store.sidebarCollapsed) {
+    workspaceMenuOpen.value = false;
+  }
+  store.toggleSidebarCollapsed();
+};
 
 const setWorkspaceFromInput = () => {
   const path = workspaceInput.value.trim();
@@ -45,7 +58,7 @@ const createSession = (shellType: ShellType = 'powershell') => {
   store.createTab(shellType, undefined, activeWorkspacePath.value);
 };
 
-const closeSession = (event: MouseEvent, tab: Tab) => {
+const closeSession = (event: MouseEvent | KeyboardEvent, tab: Tab) => {
   event.stopPropagation();
   if (!confirm(`关闭 ${tab.title}？`)) return;
   store.removeTab(tab.id);
@@ -63,17 +76,17 @@ const getSessionSubtitle = (tab: Tab) => {
     <button
       class="collapse-toggle"
       :title="store.sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'"
-      @click="store.toggleSidebarCollapsed()"
+      @click="toggleSidebar"
     >
       {{ store.sidebarCollapsed ? '›' : '‹' }}
     </button>
 
     <div class="workspace-section">
-      <button class="workspace-button" :title="activeWorkspacePath" @click="workspaceMenuOpen = !workspaceMenuOpen">
+      <button class="workspace-button" :title="workspacePathLabel" @click="toggleWorkspaceMenu">
         <span class="workspace-icon">📁</span>
         <span v-if="!store.sidebarCollapsed" class="workspace-text">
           <span class="workspace-name">{{ workspaceName }}</span>
-          <span class="workspace-path">{{ activeWorkspacePath }}</span>
+          <span class="workspace-path">{{ workspacePathLabel }}</span>
         </span>
         <span v-if="!store.sidebarCollapsed" class="workspace-caret">⌄</span>
       </button>
@@ -105,7 +118,7 @@ const getSessionSubtitle = (tab: Tab) => {
         :key="tab.id"
         class="session-item"
         :class="{ active: tab.id === store.activeTabId }"
-        :title="`${tab.title}\n${tab.cwd ?? activeWorkspacePath}`"
+        :title="`${tab.title}\n${tab.cwd ?? workspacePathLabel}`"
         @click="store.switchTab(tab.id)"
       >
         <span class="session-icon">{{ iconMap[tab.shellType] }}</span>
@@ -117,7 +130,16 @@ const getSessionSubtitle = (tab: Tab) => {
           {{ tab.splitDirection === 'vertical' ? '▐' : '▀' }}
         </span>
         <span class="session-status" :class="{ active: tab.id === store.activeTabId }"></span>
-        <span v-if="!store.sidebarCollapsed" class="session-close" @click="closeSession($event, tab)">×</span>
+        <span
+          v-if="!store.sidebarCollapsed"
+          class="session-close"
+          role="button"
+          tabindex="0"
+          :aria-label="`关闭 ${tab.title}`"
+          @click="closeSession($event, tab)"
+          @keydown.enter="closeSession($event, tab)"
+          @keydown.space.prevent="closeSession($event, tab)"
+        >×</span>
       </button>
     </div>
 
