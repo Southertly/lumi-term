@@ -119,21 +119,22 @@ const getSessionSubtitle = (tab: Tab) => {
         class="session-item"
         :class="{ active: tab.id === store.activeTabId }"
         :title="`${tab.title}\n${tab.cwd ?? workspacePathLabel}`"
-        role="button"
-        tabindex="0"
-        @click="store.switchTab(tab.id)"
-        @keydown.enter="store.switchTab(tab.id)"
-        @keydown.space.prevent="store.switchTab(tab.id)"
       >
-        <span class="session-icon">{{ iconMap[tab.shellType] }}</span>
-        <span v-if="!store.sidebarCollapsed" class="session-content">
-          <span class="session-title">{{ tab.title }}</span>
-          <span class="session-subtitle">{{ getSessionSubtitle(tab) }}</span>
-        </span>
-        <span v-if="!store.sidebarCollapsed && tab.panes.length > 1" class="split-badge">
-          {{ tab.splitDirection === 'vertical' ? '▐' : '▀' }}
-        </span>
-        <span class="session-status" :class="{ active: tab.id === store.activeTabId }"></span>
+        <button
+          type="button"
+          class="session-select"
+          @click="store.switchTab(tab.id)"
+        >
+          <span class="session-icon">{{ iconMap[tab.shellType] }}</span>
+          <span v-if="!store.sidebarCollapsed" class="session-content">
+            <span class="session-title">{{ tab.title }}</span>
+            <span class="session-subtitle">{{ getSessionSubtitle(tab) }}</span>
+          </span>
+          <span v-if="!store.sidebarCollapsed && tab.panes.length > 1" class="split-badge">
+            {{ tab.splitDirection === 'vertical' ? '▐' : '▀' }}
+          </span>
+          <span class="session-status" :class="{ active: tab.id === store.activeTabId }"></span>
+        </button>
         <button
           v-if="!store.sidebarCollapsed"
           type="button"
@@ -358,24 +359,21 @@ const getSessionSubtitle = (tab: Tab) => {
   width: 100%;
   min-height: 42px;
   display: flex;
-  align-items: center;
-  gap: 9px;
+  align-items: stretch;
   margin-bottom: 6px;
-  padding: 8px 9px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: var(--ui-bg-light);
   color: var(--ui-fg);
-  cursor: pointer;
-  text-align: left;
+  overflow: hidden;
 }
 
 .collapsed .session-item {
-  justify-content: center;
-  padding: 8px 0;
+  min-height: 42px;
 }
 
-.session-item:hover {
+.session-item:hover,
+.session-item:focus-within {
   background: var(--ui-bg-lighter);
   border-color: var(--ui-hover);
 }
@@ -384,6 +382,37 @@ const getSessionSubtitle = (tab: Tab) => {
   background: var(--ui-accent);
   border-color: var(--ui-accent);
   color: #11111b;
+}
+
+.session-select {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.collapsed .session-select {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.session-select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ui-accent) 65%, #fff);
+  outline-offset: -2px;
+}
+
+.session-item.active .session-select:focus-visible {
+  outline-color: rgba(17, 17, 27, 0.75);
 }
 
 .session-icon {
