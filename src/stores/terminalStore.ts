@@ -54,10 +54,7 @@ const shellTitles: Record<ShellType, string> = {
 
 const normalizePath = (path: string): string => path.trim();
 
-const getFallbackWorkspace = (): string => {
-  const path = window.location.pathname;
-  return decodeURIComponent(path.slice(1)).replace(/\\/g, '/');
-};
+const getFallbackWorkspace = (): string | null => null;
 
 const persistState = (
   tabs: Tab[],
@@ -123,9 +120,10 @@ export const useTerminalStore = defineStore('terminal', () => {
     ].slice(0, 8);
   };
 
-  const ensureWorkspace = (): string => {
+  const ensureWorkspace = (): string | null => {
     if (currentWorkspacePath.value) return currentWorkspacePath.value;
     const fallback = recentWorkspacePaths.value[0] ?? getFallbackWorkspace();
+    if (!fallback) return null;
     currentWorkspacePath.value = fallback;
     addRecentWorkspace(fallback);
     return fallback;
@@ -146,7 +144,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     sidebarCollapsed.value = !sidebarCollapsed.value;
   }
 
-  function createTab(shellType: ShellType = 'powershell', title?: string, cwd?: string) {
+  function createTab(shellType: ShellType = 'powershell', title?: string, cwd?: string, options?: { addToRecent?: boolean }) {
     const id = crypto.randomUUID();
     const paneId = crypto.randomUUID();
     const tabWorkspace = cwd ? normalizePath(cwd) : ensureWorkspace();
@@ -155,13 +153,13 @@ export const useTerminalStore = defineStore('terminal', () => {
       title: title ?? shellTitles[shellType],
       shellType,
       sessionId: null,
-      cwd: tabWorkspace,
+      cwd: tabWorkspace || undefined,
       panes: [{ id: paneId, shellType, sessionId: null, size: 100 }],
       splitDirection: null,
       activePaneId: paneId,
     });
     activeTabId.value = id;
-    addRecentWorkspace(tabWorkspace);
+    if (tabWorkspace && options?.addToRecent !== false) addRecentWorkspace(tabWorkspace);
     return id;
   }
 
@@ -207,6 +205,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     if (activeTabId.value === id) {
       const next = tabs.value[index] ?? tabs.value[index - 1] ?? null;
       activeTabId.value = next?.id ?? null;
+      if (next?.cwd) currentWorkspacePath.value = next.cwd;
     }
   }
 
@@ -306,7 +305,10 @@ export const useTerminalStore = defineStore('terminal', () => {
     const { title, shellType, color, cwd } = lastClosedTab.value;
     const id = createTab(shellType, title, cwd);
     const tab = tabs.value.find((t) => t.id === id);
-    if (tab && color) tab.color = color;
+    if (tab) {
+      if (color) tab.color = color;
+      if (tab.cwd) setCurrentWorkspace(tab.cwd);
+    }
     lastClosedTab.value = null;
     return id;
   }
@@ -334,11 +336,11 @@ export const useTerminalStore = defineStore('terminal', () => {
       ? persisted.currentWorkspacePath
       : recentWorkspacePaths.value[0] ?? null;
     sidebarCollapsed.value = persisted.sidebarCollapsed ?? false;
-    const workspace = ensureWorkspace();
+    const workspace = currentWorkspacePath.value ?? recentWorkspacePaths.value[0] ?? getFallbackWorkspace();
 
     for (const pt of persisted.tabs) {
       const panes = pt.panes ?? [{ shellType: pt.shellType, size: 100 }];
-      createTab(pt.shellType, pt.title, pt.cwd ?? workspace);
+      createTab(pt.shellType, pt.title, pt.cwd ?? workspace ?? undefined, { addToRecent: false });
       const tab = tabs.value[tabs.value.length - 1];
       if (pt.color) tab.color = pt.color;
 
