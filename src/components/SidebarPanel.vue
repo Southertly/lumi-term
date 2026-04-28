@@ -473,8 +473,19 @@ const getSessionSubtitle = (tab: Tab) => {
   font: inherit;
 }
 
-.session-item:hover .session-close {
+.session-item:hover .session-close,
+.session-item:focus-within .session-close,
+.session-close:focus-visible {
   opacity: 0.7;
+}
+
+.session-close:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ui-accent) 65%, #fff);
+  outline-offset: 2px;
+}
+
+.session-item.active .session-close:focus-visible {
+  outline-color: rgba(17, 17, 27, 0.75);
 }
 
 .session-close:hover {
