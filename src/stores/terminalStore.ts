@@ -355,7 +355,6 @@ export const useTerminalStore = defineStore('terminal', () => {
     }
     const activeIndex = Math.min(persisted.activeIndex, tabs.value.length - 1);
     activeTabId.value = tabs.value[activeIndex]?.id ?? tabs.value[0]?.id ?? null;
-    if (activeTab.value?.cwd) currentWorkspacePath.value = activeTab.value.cwd;
   }
 
   watch(
