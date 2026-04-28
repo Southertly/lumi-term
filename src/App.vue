@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watchEffect } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';import TabBar from './components/TabBar.vue';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import SidebarPanel from './components/SidebarPanel.vue';
+import TabBar from './components/TabBar.vue';
 import TerminalTab from './components/TerminalTab.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import { useTerminalStore } from './stores/terminalStore';
@@ -252,14 +254,19 @@ onUnmounted(() => {
         <button class="control-btn close-btn" @click="closeApp">✕</button>
       </div>
     </div>
-    <TabBar data-tauri-no-drag />
-    <div class="terminal-wrapper" data-tauri-no-drag>
-      <TerminalTab
-        v-for="tab in store.tabs"
-        :key="tab.id"
-        :tab-id="tab.id"
-        :active="tab.id === store.activeTabId"
-      />
+    <div class="main-layout" data-tauri-no-drag>
+      <SidebarPanel />
+      <div class="content-layout">
+        <TabBar />
+        <div class="terminal-wrapper">
+          <TerminalTab
+            v-for="tab in store.tabs"
+            :key="tab.id"
+            :tab-id="tab.id"
+            :active="tab.id === store.activeTabId"
+          />
+        </div>
+      </div>
     </div>
   </div>
   <SettingsModal :visible="showSettings" @close="showSettings = false" />
@@ -303,6 +310,19 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
 .close-btn:hover {
   background: #f38ba8;
   color: #11111b;
+}
+.main-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.content-layout {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .terminal-wrapper { flex: 1; overflow: hidden; position: relative; }
 </style>
