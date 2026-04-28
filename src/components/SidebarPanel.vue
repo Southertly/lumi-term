@@ -113,13 +113,17 @@ const getSessionSubtitle = (tab: Tab) => {
     </div>
 
     <div class="session-list">
-      <button
+      <div
         v-for="tab in sessionTabs"
         :key="tab.id"
         class="session-item"
         :class="{ active: tab.id === store.activeTabId }"
         :title="`${tab.title}\n${tab.cwd ?? workspacePathLabel}`"
+        role="button"
+        tabindex="0"
         @click="store.switchTab(tab.id)"
+        @keydown.enter="store.switchTab(tab.id)"
+        @keydown.space.prevent="store.switchTab(tab.id)"
       >
         <span class="session-icon">{{ iconMap[tab.shellType] }}</span>
         <span v-if="!store.sidebarCollapsed" class="session-content">
@@ -130,17 +134,14 @@ const getSessionSubtitle = (tab: Tab) => {
           {{ tab.splitDirection === 'vertical' ? '▐' : '▀' }}
         </span>
         <span class="session-status" :class="{ active: tab.id === store.activeTabId }"></span>
-        <span
+        <button
           v-if="!store.sidebarCollapsed"
+          type="button"
           class="session-close"
-          role="button"
-          tabindex="0"
           :aria-label="`关闭 ${tab.title}`"
           @click="closeSession($event, tab)"
-          @keydown.enter="closeSession($event, tab)"
-          @keydown.space.prevent="closeSession($event, tab)"
-        >×</span>
-      </button>
+        >×</button>
+      </div>
     </div>
 
     <div class="sidebar-footer">
@@ -433,9 +434,14 @@ const getSessionSubtitle = (tab: Tab) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
   border-radius: 4px;
+  background: transparent;
+  padding: 0;
   opacity: 0;
   color: inherit;
+  cursor: pointer;
+  font: inherit;
 }
 
 .session-item:hover .session-close {
