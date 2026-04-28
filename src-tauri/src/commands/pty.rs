@@ -9,10 +9,11 @@ pub fn create_pty(
     shell: String,
     cols: u16,
     rows: u16,
+    cwd: Option<String>,
     channel: Channel<Vec<u8>>,
 ) -> Result<String, String> {
     let session_id = Uuid::new_v4().to_string();
-    spawn_shell(store.inner().clone(), session_id.clone(), shell, cols, rows, channel)?;
+    spawn_shell(store.inner().clone(), session_id.clone(), shell, cols, rows, cwd, channel)?;
     Ok(session_id)
 }
 

@@ -39,6 +39,7 @@ pub fn spawn_shell(
     shell: String,
     cols: u16,
     rows: u16,
+    cwd: Option<String>,
     channel: Channel<Vec<u8>>,
 ) -> Result<(), String> {
     let pty_system = native_pty_system();
@@ -54,6 +55,13 @@ pub fn spawn_shell(
     };
 
     let mut cmd = CommandBuilder::new(&resolved_shell);
+    if let Some(cwd) = cwd.filter(|path| !path.trim().is_empty()) {
+        let path = std::path::Path::new(&cwd);
+        if !path.is_dir() {
+            return Err(format!("working directory does not exist: {}", cwd));
+        }
+        cmd.cwd(path);
+    }
     if resolved_shell.to_lowercase().contains("cmd") {
         cmd.args(["/c", "chcp 65001 >nul && cmd"]);
     } else if resolved_shell.to_lowercase().contains("powershell") || resolved_shell.to_lowercase().contains("pwsh") {

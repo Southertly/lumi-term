@@ -84,6 +84,7 @@ const shellCommands: Record<ShellType, string> = {
   cmd: 'cmd.exe',
   wsl2: 'wsl.exe',
 };
+const tabCwd = computed(() => store.tabs.find((t) => t.id === props.tabId)?.cwd ?? null);
 
 // ── Main init ──
 async function init(container: HTMLElement) {
@@ -108,6 +109,7 @@ async function init(container: HTMLElement) {
       shell: shellCommands[props.shellType],
       cols: terminal.cols,
       rows: terminal.rows,
+      cwd: tabCwd.value,
       channel,
     });
   } catch (e) {
