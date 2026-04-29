@@ -86,7 +86,6 @@ function handleKeydown(e: KeyboardEvent) {
       const tab = store.tabs.find((t) => t.id === store.activeTabId);
       if (tab && confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
-        if (store.tabs.length === 0) closeApp();
       }
     }
     return;
@@ -165,7 +164,6 @@ function handleKeydown(e: KeyboardEvent) {
         store.closePane(store.activeTabId, tab.activePaneId);
       } else if (tab && confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
-        if (store.tabs.length === 0) closeApp();
       }
     }
     return;
@@ -259,6 +257,12 @@ onUnmounted(() => {
       <div class="content-layout">
         <TabBar />
         <div class="terminal-wrapper">
+          <div v-if="store.tabs.length === 0" class="terminal-empty-state">
+            <div class="terminal-empty-card">
+              <div class="terminal-empty-title">暂无 Session</div>
+              <div class="terminal-empty-copy">从左侧边栏创建新的 PowerShell session 开始使用。</div>
+            </div>
+          </div>
           <TerminalTab
             v-for="tab in store.tabs"
             :key="tab.id"
@@ -325,4 +329,33 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
   overflow: hidden;
 }
 .terminal-wrapper { flex: 1; overflow: hidden; position: relative; }
+.terminal-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--ui-bg);
+  color: var(--ui-fg-muted);
+}
+.terminal-empty-card {
+  max-width: 360px;
+  padding: 24px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: var(--ui-bg-light);
+  text-align: center;
+}
+.terminal-empty-title {
+  color: var(--ui-fg);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.terminal-empty-copy {
+  color: var(--ui-fg-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 </style>
