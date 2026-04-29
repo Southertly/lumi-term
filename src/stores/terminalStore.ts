@@ -45,6 +45,7 @@ interface PersistedState {
 }
 
 const STORAGE_KEY = 'lumiterm_tabs';
+const MAX_RECENT_WORKSPACES = 5;
 
 const shellTitles: Record<ShellType, string> = {
   powershell: 'PowerShell',
@@ -52,7 +53,14 @@ const shellTitles: Record<ShellType, string> = {
   wsl2: 'WSL2',
 };
 
-const normalizePath = (path: string): string => path.trim();
+const normalizePath = (path: string): string => {
+  const trimmed = path.trim();
+  if (!trimmed) return '';
+  const withoutNamespace = trimmed.replace(/^\\\\\?\\/, '').replace(/^\/\?\//, '');
+  const slashNormalized = withoutNamespace.replace(/\\+/g, '/').replace(/\/+/g, '/');
+  const withoutTrailingSlash = slashNormalized.replace(/^(.:)\/$/, '$1/').replace(/\/+$/g, '');
+  return withoutTrailingSlash.replace(/^([a-z]):/, (_, drive: string) => `${drive.toUpperCase()}:`);
+};
 
 const getFallbackWorkspace = (): string | null => null;
 
@@ -108,7 +116,7 @@ export const useTerminalStore = defineStore('terminal', () => {
 
   const tabsForCurrentWorkspace = computed(() => {
     if (!currentWorkspacePath.value) return tabs.value;
-    return tabs.value.filter((tab) => tab.cwd === currentWorkspacePath.value);
+    return tabs.value.filter((tab) => !tab.cwd || tab.cwd === currentWorkspacePath.value);
   });
 
   const addRecentWorkspace = (path: string) => {
@@ -117,7 +125,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     recentWorkspacePaths.value = [
       normalized,
       ...recentWorkspacePaths.value.filter((item) => item !== normalized),
-    ].slice(0, 8);
+    ].slice(0, MAX_RECENT_WORKSPACES);
   };
 
   const ensureWorkspace = (): string | null => {
@@ -135,9 +143,9 @@ export const useTerminalStore = defineStore('terminal', () => {
     currentWorkspacePath.value = normalized;
     addRecentWorkspace(normalized);
 
-    const activeTabInWorkspace = activeTab.value?.cwd === normalized;
+    const activeTabInWorkspace = !!activeTab.value && (!activeTab.value.cwd || activeTab.value.cwd === normalized);
     if (!activeTabInWorkspace) {
-      const firstWorkspaceTab = tabs.value.find((tab) => tab.cwd === normalized);
+      const firstWorkspaceTab = tabs.value.find((tab) => !tab.cwd || tab.cwd === normalized);
       if (firstWorkspaceTab) activeTabId.value = firstWorkspaceTab.id;
     }
   }
@@ -209,9 +217,11 @@ export const useTerminalStore = defineStore('terminal', () => {
     tabs.value.splice(index, 1);
 
     if (activeTabId.value === id) {
-      const next = tabs.value[index] ?? tabs.value[index - 1] ?? null;
+      const nextInWorkspace = currentWorkspacePath.value
+        ? tabs.value.find((candidate) => !candidate.cwd || candidate.cwd === currentWorkspacePath.value)
+        : null;
+      const next = nextInWorkspace ?? tabs.value[index] ?? tabs.value[index - 1] ?? null;
       activeTabId.value = next?.id ?? null;
-      if (next?.cwd) currentWorkspacePath.value = next.cwd;
     }
   }
 
@@ -336,10 +346,14 @@ export const useTerminalStore = defineStore('terminal', () => {
     }
 
     recentWorkspacePaths.value = Array.isArray(persisted.recentWorkspacePaths)
-      ? persisted.recentWorkspacePaths.filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
+      ? persisted.recentWorkspacePaths
+          .filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
+          .map(normalizePath)
+          .filter((path) => path.length > 0)
+          .slice(0, MAX_RECENT_WORKSPACES)
       : [];
     currentWorkspacePath.value = typeof persisted.currentWorkspacePath === 'string'
-      ? persisted.currentWorkspacePath
+      ? ((normalizePath(persisted.currentWorkspacePath) || recentWorkspacePaths.value[0]) ?? null)
       : recentWorkspacePaths.value[0] ?? null;
     sidebarCollapsed.value = persisted.sidebarCollapsed ?? false;
     const workspace = currentWorkspacePath.value ?? recentWorkspacePaths.value[0] ?? getFallbackWorkspace();
