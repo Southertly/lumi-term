@@ -1,4 +1,7 @@
-use crate::services::pty_service::{close_pty, create_pty_store, resize_pty, spawn_shell, write_pty, PtyStore};
+use crate::services::pty_service::{
+    close_pty, create_pty_store, display_working_directory, list_workspace_children_entries,
+    list_workspace_root_entries, resize_pty, spawn_shell, write_pty, PtyStore, WorkspaceEntry,
+};
 use tauri::ipc::Channel;
 use tauri::State;
 use uuid::Uuid;
@@ -36,7 +39,22 @@ pub fn init_pty_store() -> PtyStore {
     create_pty_store()
 }
 
-/// Exits the application. Called by the frontend when the last terminal tab is closed.
+#[tauri::command]
+pub fn validate_workspace_path(path: String) -> Result<String, String> {
+    display_working_directory(&path)
+}
+
+#[tauri::command]
+pub fn list_workspace_roots() -> Result<Vec<WorkspaceEntry>, String> {
+    list_workspace_root_entries()
+}
+
+#[tauri::command]
+pub fn list_workspace_children(path: String) -> Result<Vec<WorkspaceEntry>, String> {
+    list_workspace_children_entries(path)
+}
+
+/// Exits the application from the window close control.
 #[tauri::command]
 pub fn close_app(store: State<PtyStore>, app: tauri::AppHandle) -> Result<(), String> {
     if let Ok(mut s) = store.lock() {

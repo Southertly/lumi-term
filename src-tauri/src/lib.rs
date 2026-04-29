@@ -1,7 +1,7 @@
 mod commands;
 mod services;
 
-use commands::pty::{close_app, close_pty_cmd, create_pty, drag_window, get_git_branch, init_pty_store, minimize_window, resize_pty_cmd, toggle_maximize, write_pty_cmd};
+use commands::pty::{close_app, close_pty_cmd, create_pty, drag_window, get_git_branch, init_pty_store, list_workspace_children, list_workspace_roots, minimize_window, resize_pty_cmd, toggle_maximize, validate_workspace_path, write_pty_cmd};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,7 +19,10 @@ pub fn run() {
             drag_window,
             minimize_window,
             toggle_maximize,
-            get_git_branch
+            get_git_branch,
+            validate_workspace_path,
+            list_workspace_roots,
+            list_workspace_children
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
