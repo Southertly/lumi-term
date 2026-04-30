@@ -78,13 +78,6 @@ function closeTab(e: MouseEvent, tabId: string) {
   if (!tab) return;
   if (confirm(`关闭 ${tab.title}？`)) {
     store.removeTab(tabId);
-    if (store.tabs.length === 0) {
-      setTimeout(() => {
-        import('@tauri-apps/api/core')
-          .then(({ invoke }) => invoke('close_app'))
-          .catch((err) => console.error('[TabBar] close_app failed:', err));
-      }, 100);
-    }
   }
 }
 
@@ -238,13 +231,6 @@ function handleCloseTab() {
   if (!tab) return;
   if (confirm(`关闭 ${tab.title}？`)) {
     store.removeTab(tabId);
-    if (store.tabs.length === 0) {
-      setTimeout(() => {
-        import('@tauri-apps/api/core')
-          .then(({ invoke }) => invoke('close_app'))
-          .catch((err) => console.error('[TabBar] close_app failed:', err));
-      }, 100);
-    }
   }
 }
 

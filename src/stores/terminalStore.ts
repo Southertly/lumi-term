@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 export type ShellType = 'powershell' | 'cmd' | 'wsl2';
 
@@ -16,6 +16,7 @@ export interface Tab {
   shellType: ShellType;
   sessionId: string | null;
   color?: string;
+  cwd?: string;
   panes: Pane[];
   splitDirection: 'horizontal' | 'vertical' | null;
   activePaneId: string | null;
@@ -30,62 +31,149 @@ interface PersistedTab {
   title: string;
   shellType: ShellType;
   color?: string;
+  cwd?: string;
   panes?: PersistedPane[];
   splitDirection?: 'horizontal' | 'vertical' | null;
 }
 
-const STORAGE_KEY = 'lumiterm_tabs';
+interface PersistedState {
+  tabs: PersistedTab[];
+  activeIndex: number;
+  currentWorkspacePath?: string | null;
+  recentWorkspacePaths?: string[];
+  sidebarCollapsed?: boolean;
+}
 
-function persistState(tabs: Tab[], activeTabId: string | null) {
+const STORAGE_KEY = 'lumiterm_tabs';
+const MAX_RECENT_WORKSPACES = 5;
+
+const shellTitles: Record<ShellType, string> = {
+  powershell: 'PowerShell',
+  cmd: 'CMD',
+  wsl2: 'WSL2',
+};
+
+const normalizePath = (path: string): string => {
+  const trimmed = path.trim();
+  if (!trimmed) return '';
+  const withoutNamespace = trimmed.replace(/^\\\\\?\\/, '').replace(/^\/\?\//, '');
+  const slashNormalized = withoutNamespace.replace(/\\+/g, '/').replace(/\/+/g, '/');
+  const withoutTrailingSlash = slashNormalized.replace(/^(.:)\/$/, '$1/').replace(/\/+$/g, '');
+  return withoutTrailingSlash.replace(/^([a-z]):/, (_, drive: string) => `${drive.toUpperCase()}:`);
+};
+
+const getFallbackWorkspace = (): string | null => null;
+
+const persistState = (
+  tabs: Tab[],
+  activeTabId: string | null,
+  currentWorkspacePath: string | null,
+  recentWorkspacePaths: string[],
+  sidebarCollapsed: boolean,
+) => {
   const activeIndex = tabs.findIndex((t) => t.id === activeTabId);
-  const data: { tabs: PersistedTab[]; activeIndex: number } = {
-    tabs: tabs.map(({ title, shellType, color, panes, splitDirection }) => ({
+  const data: PersistedState = {
+    tabs: tabs.map(({ title, shellType, color, cwd, panes, splitDirection }) => ({
       title,
       shellType,
       color,
+      cwd,
       panes: panes.map((p) => ({ shellType: p.shellType, size: p.size })),
       splitDirection,
     })),
     activeIndex: activeIndex >= 0 ? activeIndex : 0,
+    currentWorkspacePath,
+    recentWorkspacePaths,
+    sidebarCollapsed,
   };
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch { /* storage full or unavailable */ }
-}
+};
 
-function loadPersistedState(): { tabs: PersistedTab[]; activeIndex: number } | null {
+const loadPersistedState = (): PersistedState | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!Array.isArray(data.tabs) || data.tabs.length === 0) return null;
     return data;
-  } catch { return null; }
-}
+  } catch {
+    return null;
+  }
+};
 
 export const useTerminalStore = defineStore('terminal', () => {
   const tabs = ref<Tab[]>([]);
   const activeTabId = ref<string | null>(null);
   const lastClosedTab = ref<PersistedTab | null>(null);
+  const currentWorkspacePath = ref<string | null>(null);
+  const recentWorkspacePaths = ref<string[]>([]);
+  const sidebarCollapsed = ref(false);
 
-  function createTab(shellType: ShellType = 'powershell', title?: string) {
+  const activeTab = computed(() => tabs.value.find((t) => t.id === activeTabId.value) ?? null);
+
+  const tabsForCurrentWorkspace = computed(() => {
+    if (!currentWorkspacePath.value) return tabs.value;
+    return tabs.value.filter((tab) => !tab.cwd || tab.cwd === currentWorkspacePath.value);
+  });
+
+  const addRecentWorkspace = (path: string) => {
+    const normalized = normalizePath(path);
+    if (!normalized) return;
+    recentWorkspacePaths.value = [
+      normalized,
+      ...recentWorkspacePaths.value.filter((item) => item !== normalized),
+    ].slice(0, MAX_RECENT_WORKSPACES);
+  };
+
+  const ensureWorkspace = (): string | null => {
+    if (currentWorkspacePath.value) return currentWorkspacePath.value;
+    const fallback = recentWorkspacePaths.value[0] ?? getFallbackWorkspace();
+    if (!fallback) return null;
+    currentWorkspacePath.value = fallback;
+    addRecentWorkspace(fallback);
+    return fallback;
+  };
+
+  function setCurrentWorkspace(path: string) {
+    const normalized = normalizePath(path);
+    if (!normalized) return;
+    currentWorkspacePath.value = normalized;
+    addRecentWorkspace(normalized);
+
+    const activeTabInWorkspace = !!activeTab.value && (!activeTab.value.cwd || activeTab.value.cwd === normalized);
+    if (!activeTabInWorkspace) {
+      const firstWorkspaceTab = tabs.value.find((tab) => !tab.cwd || tab.cwd === normalized);
+      if (firstWorkspaceTab) activeTabId.value = firstWorkspaceTab.id;
+    }
+  }
+
+  function setSidebarCollapsed(collapsed: boolean) {
+    sidebarCollapsed.value = collapsed;
+  }
+
+  function toggleSidebarCollapsed() {
+    sidebarCollapsed.value = !sidebarCollapsed.value;
+  }
+
+  function createTab(shellType: ShellType = 'powershell', title?: string, cwd?: string, options?: { addToRecent?: boolean }) {
     const id = crypto.randomUUID();
     const paneId = crypto.randomUUID();
-    const defaultTitles: Record<ShellType, string> = {
-      powershell: 'PowerShell',
-      cmd: 'CMD',
-      wsl2: 'WSL2',
-    };
+    const tabWorkspace = cwd ? normalizePath(cwd) : ensureWorkspace();
     tabs.value.push({
       id,
-      title: title ?? defaultTitles[shellType],
+      title: title ?? shellTitles[shellType],
       shellType,
       sessionId: null,
+      cwd: tabWorkspace || undefined,
       panes: [{ id: paneId, shellType, sessionId: null, size: 100 }],
       splitDirection: null,
       activePaneId: paneId,
     });
     activeTabId.value = id;
+    if (tabWorkspace && options?.addToRecent !== false) addRecentWorkspace(tabWorkspace);
     return id;
   }
 
@@ -121,6 +209,7 @@ export const useTerminalStore = defineStore('terminal', () => {
       title: tab.title,
       shellType: tab.shellType,
       color: tab.color,
+      cwd: tab.cwd,
       panes: tab.panes.map((p) => ({ shellType: p.shellType, size: p.size })),
       splitDirection: tab.splitDirection,
     };
@@ -128,15 +217,19 @@ export const useTerminalStore = defineStore('terminal', () => {
     tabs.value.splice(index, 1);
 
     if (activeTabId.value === id) {
-      const next = tabs.value[index] ?? tabs.value[index - 1] ?? null;
+      const nextInWorkspace = currentWorkspacePath.value
+        ? tabs.value.find((candidate) => !candidate.cwd || candidate.cwd === currentWorkspacePath.value)
+        : null;
+      const next = nextInWorkspace ?? tabs.value[index] ?? tabs.value[index - 1] ?? null;
       activeTabId.value = next?.id ?? null;
     }
   }
 
   function switchTab(id: string) {
-    if (tabs.value.some((t) => t.id === id)) {
-      activeTabId.value = id;
-    }
+    const tab = tabs.value.find((t) => t.id === id);
+    if (!tab) return;
+    activeTabId.value = id;
+    if (tab.cwd) setCurrentWorkspace(tab.cwd);
   }
 
   function reorderTabs(fromIndex: number, toIndex: number) {
@@ -225,10 +318,13 @@ export const useTerminalStore = defineStore('terminal', () => {
 
   function reopenTab() {
     if (!lastClosedTab.value) return null;
-    const { title, shellType, color } = lastClosedTab.value;
-    const id = createTab(shellType, title);
+    const { title, shellType, color, cwd } = lastClosedTab.value;
+    const id = createTab(shellType, title, cwd);
     const tab = tabs.value.find((t) => t.id === id);
-    if (tab && color) tab.color = color;
+    if (tab) {
+      if (color) tab.color = color;
+      if (tab.cwd) setCurrentWorkspace(tab.cwd);
+    }
     lastClosedTab.value = null;
     return id;
   }
@@ -244,36 +340,66 @@ export const useTerminalStore = defineStore('terminal', () => {
   function restoreTabs() {
     const persisted = loadPersistedState();
     if (!persisted) {
+      ensureWorkspace();
       createTab('powershell');
       return;
     }
-    for (const pt of persisted.tabs) {
-      const panes = pt.panes ?? [{ shellType: pt.shellType, size: 100 }];
-      createTab(pt.shellType, pt.title);
-      const tab = tabs.value[tabs.value.length - 1];
-      if (pt.color) tab.color = pt.color;
 
-      if (pt.panes && pt.panes.length > 0) {
-        tab.panes = panes.map((p) => ({
-          id: crypto.randomUUID(),
-          shellType: p.shellType,
-          sessionId: null,
-          size: p.size,
-        }));
-        tab.splitDirection = pt.splitDirection ?? null;
-        tab.activePaneId = tab.panes[0].id;
-      }
-    }
-    const activeIndex = Math.min(persisted.activeIndex, tabs.value.length - 1);
-    activeTabId.value = tabs.value[activeIndex]?.id ?? tabs.value[0]?.id ?? null;
+    recentWorkspacePaths.value = Array.isArray(persisted.recentWorkspacePaths)
+      ? persisted.recentWorkspacePaths
+          .filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
+          .map(normalizePath)
+          .filter((path) => path.length > 0)
+          .slice(0, MAX_RECENT_WORKSPACES)
+      : [];
+    currentWorkspacePath.value = typeof persisted.currentWorkspacePath === 'string'
+      ? ((normalizePath(persisted.currentWorkspacePath) || recentWorkspacePaths.value[0]) ?? null)
+      : recentWorkspacePaths.value[0] ?? null;
+    sidebarCollapsed.value = persisted.sidebarCollapsed ?? false;
+    const workspace = currentWorkspacePath.value ?? recentWorkspacePaths.value[0] ?? getFallbackWorkspace();
+
+    createTab('powershell', undefined, workspace ?? undefined);
   }
 
-  watch([tabs, activeTabId], () => persistState(tabs.value, activeTabId.value), { deep: true });
+  watch(
+    [tabs, activeTabId, currentWorkspacePath, recentWorkspacePaths, sidebarCollapsed],
+    () => persistState(
+      tabs.value,
+      activeTabId.value,
+      currentWorkspacePath.value,
+      recentWorkspacePaths.value,
+      sidebarCollapsed.value,
+    ),
+    { deep: true },
+  );
 
   return {
-    tabs, activeTabId, createTab, setSessionId, setPaneSessionId, removeTab,
-    switchTab, reorderTabs, renameTab, closeOtherTabs, setTabColor,
-    splitTab, closePane, setActivePane, updatePaneSizes, getTabPaneCount,
-    restoreTabs, reopenTab, moveTab,
+    tabs,
+    activeTabId,
+    activeTab,
+    currentWorkspacePath,
+    recentWorkspacePaths,
+    sidebarCollapsed,
+    tabsForCurrentWorkspace,
+    createTab,
+    setSessionId,
+    setPaneSessionId,
+    removeTab,
+    switchTab,
+    reorderTabs,
+    renameTab,
+    closeOtherTabs,
+    setTabColor,
+    splitTab,
+    closePane,
+    setActivePane,
+    updatePaneSizes,
+    getTabPaneCount,
+    restoreTabs,
+    reopenTab,
+    moveTab,
+    setCurrentWorkspace,
+    setSidebarCollapsed,
+    toggleSidebarCollapsed,
   };
 });

@@ -1,0 +1,187 @@
+import { invoke } from '@tauri-apps/api/core';
+import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
+
+export interface TextFilePayload {
+  path: string;
+  name: string;
+  content: string;
+}
+
+export interface EditorFile {
+  path: string;
+  name: string;
+  content: string;
+  savedContent: string;
+  loading: boolean;
+  saving: boolean;
+  error: string;
+}
+
+export type ActiveEditorFile = EditorFile & { dirty: boolean };
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Unknown editor error';
+}
+
+function fileNameFromPath(path: string): string {
+  const normalized = path.replace(/\\/g, '/');
+  return normalized.split('/').filter(Boolean).pop() ?? path;
+}
+
+export const useEditorStore = defineStore('editor', () => {
+  const files = ref<EditorFile[]>([]);
+  const activePath = ref<string | null>(null);
+  const openError = ref('');
+  const pendingOpens = new Map<string, Promise<EditorFile | null>>();
+
+  const activeFile = computed<ActiveEditorFile | null>(() => {
+    const file = files.value.find((item) => item.path === activePath.value);
+    return file ? { ...file, dirty: file.content !== file.savedContent } : null;
+  });
+
+  const hasOpenFiles = computed(() => files.value.length > 0);
+  const dirtyFiles = computed(() => files.value.filter((file) => file.content !== file.savedContent));
+
+  function isDirty(path: string): boolean {
+    const file = files.value.find((item) => item.path === path);
+    return file ? file.content !== file.savedContent : false;
+  }
+
+  async function openFile(path: string): Promise<EditorFile | null> {
+    const existing = files.value.find((file) => file.path === path);
+    if (existing) {
+      activePath.value = existing.path;
+      openError.value = '';
+      return existing;
+    }
+
+    const pendingOpen = pendingOpens.get(path);
+    if (pendingOpen) return pendingOpen;
+
+    const file: EditorFile = {
+      path,
+      name: fileNameFromPath(path),
+      content: '',
+      savedContent: '',
+      loading: true,
+      saving: false,
+      error: '',
+    };
+    files.value.push(file);
+    activePath.value = file.path;
+    openError.value = '';
+
+    const request = invoke<TextFilePayload>('read_text_file_cmd', { path })
+      .then((payload) => {
+        const loadedFile: EditorFile = {
+          path: payload.path,
+          name: payload.name,
+          content: payload.content,
+          savedContent: payload.content,
+          loading: false,
+          saving: false,
+          error: '',
+        };
+        const index = files.value.indexOf(file);
+        if (index === -1) return null;
+        files.value.splice(index, 1, loadedFile);
+        activePath.value = loadedFile.path;
+        return loadedFile;
+      })
+      .catch((error) => {
+        const index = files.value.indexOf(file);
+        if (index === -1) return null;
+        const message = errorMessage(error);
+        openError.value = message;
+        const currentPath = file.path;
+        files.value.splice(index, 1);
+        if (activePath.value === currentPath) {
+          activePath.value = files.value[files.value.length - 1]?.path ?? null;
+        }
+        return null;
+      })
+      .finally(() => {
+        pendingOpens.delete(path);
+      });
+
+    pendingOpens.set(path, request);
+    return request;
+  }
+
+  function setActiveFile(path: string | null) {
+    if (path === null || files.value.some((file) => file.path === path)) {
+      activePath.value = path;
+    }
+  }
+
+  function updateActiveContent(content: string) {
+    const file = files.value.find((item) => item.path === activePath.value);
+    if (!file) return;
+
+    file.content = content;
+    file.error = '';
+  }
+
+  async function saveActiveFile(): Promise<boolean> {
+    const file = files.value.find((item) => item.path === activePath.value);
+    if (!file || file.saving) return false;
+
+    file.saving = true;
+    file.error = '';
+
+    try {
+      await invoke('write_text_file_cmd', { path: file.path, content: file.content });
+      file.savedContent = file.content;
+      return true;
+    } catch (error) {
+      file.error = errorMessage(error);
+      return false;
+    } finally {
+      file.saving = false;
+    }
+  }
+
+  function closeFile(path: string): boolean {
+    const index = files.value.findIndex((file) => file.path === path);
+    if (index === -1) return false;
+
+    const file = files.value[index];
+    if (file.content !== file.savedContent) {
+      const shouldClose = window.confirm(`关闭 ${file.name}？未保存的更改会丢失。`);
+      if (!shouldClose) return false;
+    }
+
+    files.value.splice(index, 1);
+
+    if (activePath.value === path) {
+      const next = files.value[index] ?? files.value[index - 1] ?? null;
+      activePath.value = next?.path ?? null;
+    }
+
+    return true;
+  }
+
+  function closeActiveFile(): boolean {
+    if (!activePath.value) return false;
+    return closeFile(activePath.value);
+  }
+
+  return {
+    files,
+    activePath,
+    openError,
+    activeFile,
+    hasOpenFiles,
+    dirtyFiles,
+    isDirty,
+    openFile,
+    setActiveFile,
+    updateActiveContent,
+    saveActiveFile,
+    closeFile,
+    closeActiveFile,
+  };
+});

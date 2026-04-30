@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watchEffect } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';import TabBar from './components/TabBar.vue';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import FileEditorPane from './components/FileEditorPane.vue';
+import SidebarPanel from './components/SidebarPanel.vue';
+import TabBar from './components/TabBar.vue';
 import TerminalTab from './components/TerminalTab.vue';
 import SettingsModal from './components/SettingsModal.vue';
+import { useEditorStore } from './stores/editorStore';
 import { useTerminalStore } from './stores/terminalStore';
 import { useThemeStore } from './stores/themeStore';
 import { useShortcutsStore } from './stores/shortcutsStore';
 
 const store = useTerminalStore();
+const editorStore = useEditorStore();
 const themeStore = useThemeStore();
 const shortcutsStore = useShortcutsStore();
 const showSettings = ref(false);
@@ -67,6 +72,12 @@ async function updateMaximizedState() {
 }
 
 function handleKeydown(e: KeyboardEvent) {
+  if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S') && editorStore.activeFile) {
+    e.preventDefault();
+    void editorStore.saveActiveFile();
+    return;
+  }
+
   // shortcutsStore-managed shortcuts
   if (shortcutsStore.matchesEvent('open-settings', e)) {
     e.preventDefault();
@@ -84,7 +95,6 @@ function handleKeydown(e: KeyboardEvent) {
       const tab = store.tabs.find((t) => t.id === store.activeTabId);
       if (tab && confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
-        if (store.tabs.length === 0) closeApp();
       }
     }
     return;
@@ -163,7 +173,6 @@ function handleKeydown(e: KeyboardEvent) {
         store.closePane(store.activeTabId, tab.activePaneId);
       } else if (tab && confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
-        if (store.tabs.length === 0) closeApp();
       }
     }
     return;
@@ -252,14 +261,28 @@ onUnmounted(() => {
         <button class="control-btn close-btn" @click="closeApp">✕</button>
       </div>
     </div>
-    <TabBar data-tauri-no-drag />
-    <div class="terminal-wrapper" data-tauri-no-drag>
-      <TerminalTab
-        v-for="tab in store.tabs"
-        :key="tab.id"
-        :tab-id="tab.id"
-        :active="tab.id === store.activeTabId"
-      />
+    <div class="main-layout" data-tauri-no-drag>
+      <SidebarPanel />
+      <div class="content-layout">
+        <FileEditorPane v-if="editorStore.hasOpenFiles" />
+        <div class="terminal-workspace">
+          <TabBar />
+          <div class="terminal-wrapper">
+            <div v-if="store.tabs.length === 0" class="terminal-empty-state">
+              <div class="terminal-empty-card">
+                <div class="terminal-empty-title">暂无 Session</div>
+                <div class="terminal-empty-copy">从顶部标签栏新建 PowerShell session 开始使用。</div>
+              </div>
+            </div>
+            <TerminalTab
+              v-for="tab in store.tabs"
+              :key="tab.id"
+              :tab-id="tab.id"
+              :active="tab.id === store.activeTabId"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <SettingsModal :visible="showSettings" @close="showSettings = false" />
@@ -304,5 +327,55 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
   background: #f38ba8;
   color: #11111b;
 }
-.terminal-wrapper { flex: 1; overflow: hidden; position: relative; }
+.main-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.content-layout {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.terminal-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-wrapper { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.terminal-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--ui-bg);
+  color: var(--ui-fg-muted);
+}
+.terminal-empty-card {
+  max-width: 360px;
+  padding: 24px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: var(--ui-bg-light);
+  text-align: center;
+}
+.terminal-empty-title {
+  color: var(--ui-fg);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.terminal-empty-copy {
+  color: var(--ui-fg-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 </style>
