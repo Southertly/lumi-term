@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
-import { computed, nextTick, ref } from 'vue';
-import { useTerminalStore, type ShellType, type Tab } from '../stores/terminalStore';
+import { computed, nextTick, ref, watch } from 'vue';
+import { useEditorStore } from '../stores/editorStore';
+import { useTerminalStore } from '../stores/terminalStore';
+import FileTreeNode from './FileTreeNode.vue';
 
 const store = useTerminalStore();
+const editorStore = useEditorStore();
 
 interface WorkspaceEntry {
   name: string;
   path: string;
   kind: 'drive' | 'folder';
+}
+
+interface FileEntry {
+  name: string;
+  path: string;
+  kind: 'file' | 'folder';
+  extension: string;
 }
 
 const workspaceInput = ref('');
@@ -21,17 +31,11 @@ const workspaceFilterTouched = ref(false);
 const selectedWorkspaceEntryIndex = ref<number | null>(null);
 const workspaceBrowserRef = ref<HTMLElement | null>(null);
 
-const shells: { type: ShellType; label: string; icon: string }[] = [
-  { type: 'powershell', label: 'PowerShell', icon: '❯' },
-  { type: 'cmd', label: 'CMD', icon: '⬛' },
-  { type: 'wsl2', label: 'WSL2', icon: '🐧' },
-];
+const rootEntries = ref<FileEntry[]>([]);
+const fileTreeLoading = ref(false);
 
-const iconMap: Record<ShellType, string> = {
-  powershell: '❯',
-  cmd: '⬛',
-  wsl2: '🐧',
-};
+const treeRefreshKey = ref(0);
+const refreshTree = () => { treeRefreshKey.value++; };
 
 const workspaceName = computed(() => {
   const path = store.currentWorkspacePath ?? 'Workspace';
@@ -61,14 +65,30 @@ const selectedWorkspaceEntry = computed(() => (
     : filteredWorkspaceEntries.value[selectedWorkspaceEntryIndex.value] ?? null
 ));
 
-const sessionTabs = computed(() => store.tabsForCurrentWorkspace);
+const loadRootEntries = async () => {
+  const path = store.currentWorkspacePath;
+  if (!path) { rootEntries.value = []; return; }
+  fileTreeLoading.value = true;
+  try {
+    rootEntries.value = await invoke<FileEntry[]>('list_directory', { path });
+  } catch {
+    rootEntries.value = [];
+  } finally {
+    fileTreeLoading.value = false;
+  }
+};
+
+watch(() => store.currentWorkspacePath, loadRootEntries, { immediate: true });
 
 const loadWorkspaceRoots = async () => {
   workspaceLoading.value = true;
   workspaceError.value = '';
-  browsedWorkspacePath.value = null;
+  const currentPath = store.currentWorkspacePath;
+  browsedWorkspacePath.value = currentPath;
   try {
-    workspaceEntries.value = await invoke<WorkspaceEntry[]>('list_workspace_roots');
+    workspaceEntries.value = currentPath
+      ? await invoke<WorkspaceEntry[]>('list_workspace_children', { path: currentPath })
+      : await invoke<WorkspaceEntry[]>('list_workspace_roots');
     selectedWorkspaceEntryIndex.value = null;
   } catch (error) {
     workspaceEntries.value = [];
@@ -198,25 +218,12 @@ const handleWorkspaceBrowserKeydown = (event: KeyboardEvent) => {
   }
 };
 
+const openFile = (path: string) => {
+  void editorStore.openFile(path);
+};
+
 const selectWorkspace = (path: string) => {
   void setWorkspace(path);
-};
-
-const createSession = (shellType: ShellType = 'powershell') => {
-  store.createTab(shellType, undefined, activeWorkspacePath.value);
-};
-
-const closeSession = (event: MouseEvent | KeyboardEvent, tab: Tab) => {
-  event.preventDefault();
-  event.stopPropagation();
-  if (!confirm(`关闭 ${tab.title}？`)) return;
-  store.removeTab(tab.id);
-};
-
-const getSessionSubtitle = (tab: Tab) => {
-  const shell = shells.find((item) => item.type === tab.shellType)?.label ?? tab.shellType;
-  if (tab.panes.length > 1) return `${shell} · ${tab.splitDirection === 'vertical' ? '左右分屏' : '上下分屏'}`;
-  return shell;
 };
 </script>
 
@@ -250,24 +257,33 @@ const getSessionSubtitle = (tab: Tab) => {
           <path d="M14 9l3 3-3 3" />
         </svg>
       </button>
-      <span v-if="!store.sidebarCollapsed" class="sidebar-topbar-title">Sessions</span>
+      <span v-if="!store.sidebarCollapsed" class="sidebar-topbar-title">Explorer</span>
+    </div>
+
+    <div v-if="!store.sidebarCollapsed" class="sidebar-tabs" role="tablist" aria-label="侧边栏标签">
+      <button type="button" class="sidebar-tab active" role="tab" aria-selected="true">
+        <span class="sidebar-tab-icon" aria-hidden="true">📄</span>
+        <span class="sidebar-tab-label">文件</span>
+      </button>
     </div>
 
     <div class="workspace-section">
-      <button
-        type="button"
-        class="workspace-button"
-        :title="workspacePathLabel"
-        :aria-label="`切换工作目录：${workspacePathLabel}`"
-        @click="openWorkspaceMenu"
-      >
-        <span class="workspace-icon">📁</span>
-        <span v-if="!store.sidebarCollapsed" class="workspace-text">
-          <span class="workspace-name">{{ workspaceName }}</span>
-          <span class="workspace-path">{{ workspacePathLabel }}</span>
-        </span>
-        <span v-if="!store.sidebarCollapsed" class="workspace-caret">⌄</span>
-      </button>
+      <div class="workspace-row">
+        <button
+          type="button"
+          class="workspace-button"
+          :title="workspacePathLabel"
+          :aria-label="`切换工作目录：${workspacePathLabel}`"
+          @click="openWorkspaceMenu"
+        >
+          <span class="workspace-icon">📁</span>
+          <span v-if="!store.sidebarCollapsed" class="workspace-text">
+            <span class="workspace-name">{{ workspaceName }}</span>
+            <span class="workspace-path">{{ workspacePathLabel }}</span>
+          </span>
+          <span v-if="!store.sidebarCollapsed" class="workspace-caret">⌄</span>
+        </button>
+      </div>
 
       <div v-if="workspaceMenuOpen && !store.sidebarCollapsed" class="workspace-menu">
         <form class="workspace-form" @submit.prevent="setWorkspaceFromInput">
@@ -344,78 +360,25 @@ const getSessionSubtitle = (tab: Tab) => {
       </div>
     </div>
 
-    <div v-if="!store.sidebarCollapsed" class="section-title-row">
-      <span class="section-title">Sessions</span>
-      <button type="button" class="new-session-primary" aria-label="新建 PowerShell session" @click="createSession()">New</button>
-    </div>
-
-    <div class="session-list">
-      <div v-if="!store.sidebarCollapsed && sessionTabs.length === 0" class="session-empty-state">
-        <div class="session-empty-title">暂无 Session</div>
-        <button
-          type="button"
-          class="session-empty-action"
-          aria-label="新建 PowerShell session"
-          @click="createSession('powershell')"
-        >New PowerShell</button>
+    <div class="file-tree">
+      <div v-if="!store.currentWorkspacePath" class="file-tree-empty">
+        选择工作目录以浏览文件
+      </div>
+      <div v-else-if="fileTreeLoading" class="file-tree-empty">
+        正在加载…
+      </div>
+      <div v-else-if="rootEntries.length === 0" class="file-tree-empty">
+        这个文件夹是空的
       </div>
       <template v-else>
-        <div
-          v-for="tab in sessionTabs"
-          :key="tab.id"
-          class="session-item"
-          :class="{ active: tab.id === store.activeTabId }"
-          :title="`${tab.title}\n${tab.cwd ?? workspacePathLabel}`"
-        >
-          <button
-            type="button"
-            class="session-select"
-            :aria-label="`切换到 ${tab.title}`"
-            @click="store.switchTab(tab.id)"
-          >
-            <span class="session-icon">{{ iconMap[tab.shellType] }}</span>
-            <span v-if="!store.sidebarCollapsed" class="session-content">
-              <span class="session-title">{{ tab.title }}</span>
-              <span class="session-subtitle">{{ getSessionSubtitle(tab) }}</span>
-            </span>
-            <span v-if="!store.sidebarCollapsed && tab.panes.length > 1" class="split-badge">
-              {{ tab.splitDirection === 'vertical' ? '▐' : '▀' }}
-            </span>
-            <span class="session-status" :class="{ active: tab.id === store.activeTabId }"></span>
-          </button>
-          <button
-            v-if="!store.sidebarCollapsed"
-            type="button"
-            class="session-close"
-            :aria-label="`关闭 ${tab.title}`"
-            :title="`关闭 ${tab.title}`"
-            @click="closeSession($event, tab)"
-          >×</button>
-        </div>
-      </template>
-    </div>
-
-    <div class="sidebar-footer">
-      <button
-        v-if="store.sidebarCollapsed"
-        type="button"
-        class="icon-action"
-        title="新建 PowerShell session"
-        aria-label="新建 PowerShell session"
-        @click="createSession()"
-      >＋</button>
-      <template v-else>
-        <button
-          v-for="shell in shells"
-          :key="shell.type"
-          type="button"
-          class="shell-action"
-          :aria-label="`新建 ${shell.label} session`"
-          @click="createSession(shell.type)"
-        >
-          <span>{{ shell.icon }}</span>
-          <span>{{ shell.label }}</span>
-        </button>
+        <FileTreeNode
+          v-for="entry in rootEntries"
+          :key="`${treeRefreshKey}-${entry.path}`"
+          :entry="entry"
+          :depth="0"
+          @refresh="refreshTree"
+          @open-file="openFile"
+        />
       </template>
     </div>
   </aside>
@@ -502,14 +465,61 @@ const getSessionSubtitle = (tab: Tab) => {
   text-overflow: ellipsis;
 }
 
+.sidebar-tabs {
+  display: flex;
+  align-items: flex-end;
+  min-height: 38px;
+  padding: 6px 8px 0;
+  gap: 4px;
+  background: color-mix(in srgb, var(--ui-bg) 82%, #000 18%);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.sidebar-tab {
+  min-width: 76px;
+  max-width: 140px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--ui-border);
+  border-bottom-color: transparent;
+  border-radius: 8px 8px 0 0;
+  background: var(--ui-bg-light);
+  color: var(--ui-fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: default;
+}
+
+.sidebar-tab.active {
+  background: color-mix(in srgb, var(--ui-bg-light) 82%, var(--ui-accent) 18%);
+  color: var(--ui-accent);
+}
+
+.sidebar-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .workspace-section {
   position: relative;
   padding: 12px 10px;
   border-bottom: 1px solid var(--ui-border);
 }
 
+.workspace-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .workspace-button {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -540,8 +550,7 @@ const getSessionSubtitle = (tab: Tab) => {
   align-items: flex-start;
 }
 
-.workspace-name,
-.session-title {
+.workspace-name {
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -550,8 +559,7 @@ const getSessionSubtitle = (tab: Tab) => {
   font-weight: 650;
 }
 
-.workspace-path,
-.session-subtitle {
+.workspace-path {
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -595,18 +603,13 @@ const getSessionSubtitle = (tab: Tab) => {
   outline: none;
 }
 
-.workspace-submit,
-.new-session-primary,
-.session-empty-action {
+.workspace-submit {
   border: none;
   border-radius: 7px;
   background: var(--ui-accent);
   color: #11111b;
   font-weight: 700;
   cursor: pointer;
-}
-
-.workspace-submit {
   padding: 0 8px;
 }
 
@@ -760,242 +763,27 @@ const getSessionSubtitle = (tab: Tab) => {
   font-weight: 700;
 }
 
-.section-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 10px 8px;
-}
-
-.section-title {
-  color: var(--ui-fg-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.new-session-primary {
-  height: 24px;
-  padding: 0 9px;
-  font-size: 12px;
-}
-
-.session-list {
+.file-tree {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 8px 8px;
+  overflow-x: hidden;
+  padding: 4px 0;
 }
 
-.session-list::-webkit-scrollbar {
-  width: 0;
+.file-tree::-webkit-scrollbar {
+  width: 6px;
 }
 
-.session-empty-state {
-  min-height: 128px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 8px 2px;
-  padding: 18px 12px;
-  border: 1px dashed var(--ui-border);
-  border-radius: 12px;
-  background: var(--ui-bg-light);
-  text-align: center;
-}
-
-.session-empty-title {
-  color: var(--ui-fg-muted);
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.session-empty-action {
-  min-height: 32px;
-  padding: 0 12px;
-  font-size: 12px;
-}
-
-.session-empty-action:hover,
-.session-empty-action:focus-visible {
-  filter: brightness(1.06);
-}
-
-.session-empty-action:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--ui-accent) 65%, #fff);
-  outline-offset: 2px;
-}
-
-.session-item {
-  position: relative;
-  width: 100%;
-  min-height: 42px;
-  display: flex;
-  align-items: stretch;
-  margin-bottom: 6px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: var(--ui-bg-light);
-  color: var(--ui-fg);
-  overflow: hidden;
-}
-
-.collapsed .session-item {
-  min-height: 42px;
-}
-
-.session-item:hover,
-.session-item:focus-within {
-  background: var(--ui-bg-lighter);
-  border-color: var(--ui-hover);
-}
-
-.session-item.active {
-  background: var(--ui-accent);
-  border-color: var(--ui-accent);
-  color: #11111b;
-}
-
-.session-select {
-  position: relative;
-  min-width: 0;
-  flex: 1;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 9px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.collapsed .session-select {
-  justify-content: center;
-  padding: 8px 0;
-}
-
-.session-select:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--ui-accent) 65%, #fff);
-  outline-offset: -2px;
-}
-
-.session-item.active .session-select:focus-visible {
-  outline-color: rgba(17, 17, 27, 0.75);
-}
-
-.session-icon {
-  flex-shrink: 0;
-  width: 18px;
-  text-align: center;
-  font-size: 15px;
-}
-
-.session-content {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.session-item.active .session-subtitle {
-  color: rgba(17, 17, 27, 0.65);
-}
-
-.split-badge {
-  color: var(--ui-fg-muted);
-  font-size: 11px;
-}
-
-.session-item.active .split-badge {
-  color: rgba(17, 17, 27, 0.55);
-}
-
-.session-status {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
+.file-tree::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: #22c55e;
-  opacity: 0.7;
+  background: var(--ui-hover);
 }
 
-.session-status.active {
-  background: #11111b;
-}
-
-.session-close {
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  padding: 0;
-  opacity: 0;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-}
-
-.session-item:hover .session-close,
-.session-item:focus-within .session-close,
-.session-close:focus-visible {
-  opacity: 0.7;
-}
-
-.session-close:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--ui-accent) 65%, #fff);
-  outline-offset: 2px;
-}
-
-.session-item.active .session-close:focus-visible {
-  outline-color: rgba(17, 17, 27, 0.75);
-}
-
-.session-close:hover {
-  background: rgba(0, 0, 0, 0.18);
-  opacity: 1;
-}
-
-.sidebar-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border-top: 1px solid var(--ui-border);
-}
-
-.shell-action,
-.icon-action {
-  min-height: 30px;
-  border: 1px solid var(--ui-border);
-  border-radius: 8px;
-  background: var(--ui-bg-light);
-  color: var(--ui-fg);
-  cursor: pointer;
-}
-
-.shell-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-}
-
-.shell-action:hover,
-.icon-action:hover {
-  background: var(--ui-bg-lighter);
-  border-color: var(--ui-hover);
+.file-tree-empty {
+  padding: 16px 12px;
+  color: var(--ui-fg-muted);
+  font-size: 12px;
+  text-align: center;
 }
 </style>

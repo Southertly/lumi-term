@@ -358,25 +358,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     sidebarCollapsed.value = persisted.sidebarCollapsed ?? false;
     const workspace = currentWorkspacePath.value ?? recentWorkspacePaths.value[0] ?? getFallbackWorkspace();
 
-    for (const pt of persisted.tabs) {
-      const panes = pt.panes ?? [{ shellType: pt.shellType, size: 100 }];
-      createTab(pt.shellType, pt.title, pt.cwd ?? workspace ?? undefined, { addToRecent: false });
-      const tab = tabs.value[tabs.value.length - 1];
-      if (pt.color) tab.color = pt.color;
-
-      if (pt.panes && pt.panes.length > 0) {
-        tab.panes = panes.map((p) => ({
-          id: crypto.randomUUID(),
-          shellType: p.shellType,
-          sessionId: null,
-          size: p.size,
-        }));
-        tab.splitDirection = pt.splitDirection ?? null;
-        tab.activePaneId = tab.panes[0].id;
-      }
-    }
-    const activeIndex = Math.min(persisted.activeIndex, tabs.value.length - 1);
-    activeTabId.value = tabs.value[activeIndex]?.id ?? tabs.value[0]?.id ?? null;
+    createTab('powershell', undefined, workspace ?? undefined);
   }
 
   watch(

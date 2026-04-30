@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LumiTerm editor layout mockup</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #11111b;
+      color: #cdd6f4;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    .app {
+      width: 1200px;
+      height: 760px;
+      margin: 24px auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #313244;
+      border-radius: 12px;
+      background: #181825;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+    .titlebar {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      background: #11111b;
+      border-bottom: 1px solid #313244;
+      font-size: 13px;
+    }
+    .window-controls { display: flex; gap: 8px; color: #a6adc8; }
+    .main { flex: 1; min-height: 0; display: flex; }
+    .sidebar {
+      width: 268px;
+      min-width: 268px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #313244;
+      background: #151521;
+    }
+    .sidebar-top { height: 48px; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid #313244; gap: 10px; }
+    .toggle { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #313244; background: #1e1e2e; color: #cdd6f4; display: grid; place-items: center; }
+    .tabs { display: flex; align-items: flex-end; height: 38px; padding: 6px 8px 0; border-bottom: 1px solid #313244; background: #11111b; }
+    .tab-file {
+      height: 32px;
+      min-width: 82px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border: 1px solid #313244;
+      border-bottom-color: transparent;
+      border-radius: 8px 8px 0 0;
+      background: #25253a;
+      color: #89b4fa;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .workspace { padding: 12px 10px; border-bottom: 1px solid #313244; }
+    .workspace-button { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 8px 10px; border: 1px solid #45475a; border-radius: 10px; background: #1e1e2e; }
+    .workspace-name { display: block; font-size: 13px; font-weight: 700; }
+    .workspace-path { display: block; color: #a6adc8; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+    .tree { flex: 1; min-height: 0; overflow: hidden; padding: 8px 0; font-size: 12px; }
+    .node { height: 26px; display: flex; align-items: center; gap: 5px; padding: 0 10px; color: #cdd6f4; }
+    .node:hover, .node.active { background: #2a2a40; }
+    .indent { padding-left: 28px; }
+    .content { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #1e1e2e; }
+    .editor-pane { height: 54%; min-height: 260px; display: flex; flex-direction: column; border-bottom: 1px solid #45475a; }
+    .editor-tabs { height: 36px; display: flex; align-items: flex-end; gap: 2px; padding: 0 8px; background: #181825; border-bottom: 1px solid #313244; }
+    .editor-tab { height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #313244; border-bottom-color: transparent; border-radius: 7px 7px 0 0; background: #25253a; font-size: 12px; }
+    .dirty { color: #f9e2af; }
+    .editor-toolbar { height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: #a6adc8; font-size: 11px; border-bottom: 1px solid #313244; }
+    textarea {
+      flex: 1;
+      resize: none;
+      border: 0;
+      outline: none;
+      padding: 14px 18px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      font: 13px/1.6 Consolas, "Cascadia Code", monospace;
+    }
+    .terminal-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #0f0f18; }
+    .terminal-tabs { height: 36px; display: flex; align-items: center; gap: 4px; padding: 0 8px; background: #181825; border-bottom: 1px solid #313244; }
+    .term-tab { height: 26px; display: flex; align-items: center; padding: 0 10px; border-radius: 6px; background: #25253a; color: #cdd6f4; font-size: 12px; }
+    .plus { margin-left: auto; color: #89b4fa; }
+    .terminal { flex: 1; padding: 12px 14px; color: #a6e3a1; font: 13px/1.5 Consolas, monospace; }
+    .hint { color: #6c7086; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="titlebar"><span>LumiTerm</span><span class="window-controls">— □ ×</span></div>
+    <div class="main">
+      <aside class="sidebar">
+        <div class="sidebar-top"><div class="toggle">▣</div><strong>Explorer</strong></div>
+        <div class="tabs"><div class="tab-file">📄 文件</div></div>
+        <div class="workspace">
+          <div class="workspace-button"><span>📁</span><span><span class="workspace-name">lumi-term</span><span class="workspace-path">E:/claudecode/lumi-term</span></span><span>⌄</span></div>
+        </div>
+        <div class="tree">
+          <div class="node">▾ 📁 src</div>
+          <div class="node indent">▾ 📁 components</div>
+          <div class="node indent active">📄 App.vue</div>
+          <div class="node indent">📄 SidebarPanel.vue</div>
+          <div class="node indent">📄 FileTreeNode.vue</div>
+          <div class="node">▸ 📁 src-tauri</div>
+          <div class="node">📄 package.json</div>
+        </div>
+      </aside>
+      <main class="content">
+        <section class="editor-pane">
+          <div class="editor-tabs">
+            <div class="editor-tab">📄 App.vue <span class="dirty">●</span> <span>×</span></div>
+            <div class="editor-tab">📄 SidebarPanel.vue <span>×</span></div>
+          </div>
+          <div class="editor-toolbar"><span>E:/claudecode/lumi-term/src/App.vue</span><span>Ctrl+S 保存 · 未保存</span></div>
+          <textarea spellcheck="false">&lt;template&gt;
+  &lt;div class="app-container"&gt;
+    &lt;SidebarPanel /&gt;
+    &lt;main class="workspace"&gt;
+      &lt;FileEditorPane /&gt;
+      &lt;TerminalWorkspace /&gt;
+    &lt;/main&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</textarea>
+        </section>
+        <section class="terminal-pane">
+          <div class="terminal-tabs"><div class="term-tab">PowerShell</div><div class="term-tab">CMD</div><span class="plus">＋</span></div>
+          <div class="terminal"><div>PS E:\claudecode\lumi-term&gt; pnpm dev</div><div class="hint">终端整体下移，继续保留原来的 tabs / split / xterm 能力。</div><div>VITE ready in 412ms</div></div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -2,15 +2,18 @@
 import { onMounted, onUnmounted, ref, computed, watchEffect } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import FileEditorPane from './components/FileEditorPane.vue';
 import SidebarPanel from './components/SidebarPanel.vue';
 import TabBar from './components/TabBar.vue';
 import TerminalTab from './components/TerminalTab.vue';
 import SettingsModal from './components/SettingsModal.vue';
+import { useEditorStore } from './stores/editorStore';
 import { useTerminalStore } from './stores/terminalStore';
 import { useThemeStore } from './stores/themeStore';
 import { useShortcutsStore } from './stores/shortcutsStore';
 
 const store = useTerminalStore();
+const editorStore = useEditorStore();
 const themeStore = useThemeStore();
 const shortcutsStore = useShortcutsStore();
 const showSettings = ref(false);
@@ -69,6 +72,12 @@ async function updateMaximizedState() {
 }
 
 function handleKeydown(e: KeyboardEvent) {
+  if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S') && editorStore.activeFile) {
+    e.preventDefault();
+    void editorStore.saveActiveFile();
+    return;
+  }
+
   // shortcutsStore-managed shortcuts
   if (shortcutsStore.matchesEvent('open-settings', e)) {
     e.preventDefault();
@@ -255,20 +264,23 @@ onUnmounted(() => {
     <div class="main-layout" data-tauri-no-drag>
       <SidebarPanel />
       <div class="content-layout">
-        <TabBar />
-        <div class="terminal-wrapper">
-          <div v-if="store.tabs.length === 0" class="terminal-empty-state">
-            <div class="terminal-empty-card">
-              <div class="terminal-empty-title">暂无 Session</div>
-              <div class="terminal-empty-copy">从左侧边栏创建新的 PowerShell session 开始使用。</div>
+        <FileEditorPane v-if="editorStore.hasOpenFiles" />
+        <div class="terminal-workspace">
+          <TabBar />
+          <div class="terminal-wrapper">
+            <div v-if="store.tabs.length === 0" class="terminal-empty-state">
+              <div class="terminal-empty-card">
+                <div class="terminal-empty-title">暂无 Session</div>
+                <div class="terminal-empty-copy">从顶部标签栏新建 PowerShell session 开始使用。</div>
+              </div>
             </div>
+            <TerminalTab
+              v-for="tab in store.tabs"
+              :key="tab.id"
+              :tab-id="tab.id"
+              :active="tab.id === store.activeTabId"
+            />
           </div>
-          <TerminalTab
-            v-for="tab in store.tabs"
-            :key="tab.id"
-            :tab-id="tab.id"
-            :active="tab.id === store.activeTabId"
-          />
         </div>
       </div>
     </div>
@@ -328,7 +340,15 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
   flex-direction: column;
   overflow: hidden;
 }
-.terminal-wrapper { flex: 1; overflow: hidden; position: relative; }
+.terminal-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-wrapper { flex: 1; min-height: 0; overflow: hidden; position: relative; }
 .terminal-empty-state {
   position: absolute;
   inset: 0;
