@@ -30,6 +30,9 @@ const renameInputRef = ref<HTMLInputElement | null>(null);
 
 const contextMenu = ref({ visible: false, x: 0, y: 0 });
 
+// Global request queue to prevent duplicate directory listings
+const pendingRequests = new Map<string, Promise<FileEntry[]>>();
+
 const fileIcons: Record<string, string> = {
   rs: '🦀', vue: '💚', ts: '📜', js: '📜', tsx: '📜', jsx: '📜',
   json: '📋', toml: '⚙️', yaml: '⚙️', yml: '⚙️',
@@ -54,14 +57,26 @@ const toggle = async () => {
     expanded.value = false;
     return;
   }
+
+  // Check if there's already a pending request for this path
+  const pending = pendingRequests.get(props.entry.path);
+  if (pending) {
+    children.value = await pending;
+    expanded.value = true;
+    return;
+  }
+
   if (children.value.length === 0) {
     loading.value = true;
     try {
-      children.value = await invoke<FileEntry[]>('list_directory', { path: props.entry.path });
+      const request = invoke<FileEntry[]>('list_directory', { path: props.entry.path });
+      pendingRequests.set(props.entry.path, request);
+      children.value = await request;
     } catch {
       children.value = [];
     } finally {
       loading.value = false;
+      pendingRequests.delete(props.entry.path);
     }
   }
   expanded.value = true;
