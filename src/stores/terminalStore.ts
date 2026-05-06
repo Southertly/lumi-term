@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 
@@ -147,6 +148,22 @@ export const useTerminalStore = defineStore('terminal', () => {
     if (!activeTabInWorkspace) {
       const firstWorkspaceTab = tabs.value.find((tab) => !tab.cwd || tab.cwd === normalized);
       if (firstWorkspaceTab) activeTabId.value = firstWorkspaceTab.id;
+    }
+
+    // Send cd command to the active terminal
+    const tab = activeTab.value;
+    const sessionId = tab?.panes.find((p) => p.id === tab.activePaneId)?.sessionId ?? tab?.sessionId;
+    if (sessionId && normalized) {
+      const escaped = normalized.replace(/'/g, "''");
+      const cdCmd = tab?.shellType === 'cmd'
+        ? `cd /d "${normalized}"\r\n`
+        : tab?.shellType === 'wsl2'
+          ? `cd '${escaped}'\r\n`
+          : `Set-Location -Path '${escaped}'\r\n`;
+      invoke('write_pty_cmd', {
+        sessionId,
+        data: Array.from(new TextEncoder().encode(cdCmd)),
+      }).catch(() => {});
     }
   }
 

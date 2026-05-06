@@ -452,7 +452,7 @@ pub fn spawn_shell(
     };
     let (resolved_shell, shell_args) = build_shell_command(&shell, working_directory.as_deref());
     let mut cmd = CommandBuilder::new(&resolved_shell);
-    if let Some(path) = working_directory {
+    if let Some(ref path) = working_directory {
         cmd.cwd(path);
     }
     if !shell_args.is_empty() {
@@ -460,9 +460,11 @@ pub fn spawn_shell(
     }
     cmd.env("TERM", "xterm-256color");
 
-    // Restore last working directory for all shell types
-    if let Some(cwd) = get_last_cwd() {
-        cmd.cwd(&cwd);
+    // Restore last working directory only when no explicit cwd was provided
+    if working_directory.is_none() {
+        if let Some(cwd) = get_last_cwd() {
+            cmd.cwd(&cwd);
+        }
     }
 
     pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
