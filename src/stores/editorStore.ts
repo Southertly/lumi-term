@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import { confirm } from '../utils/confirm';
 
 export interface TextFilePayload {
   path: string;
@@ -154,13 +155,13 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  function closeFile(path: string): boolean {
+  async function closeFile(path: string): Promise<boolean> {
     const index = files.value.findIndex((file) => file.path === path);
     if (index === -1) return false;
 
     const file = files.value[index];
     if (file.content !== file.savedContent) {
-      const shouldClose = window.confirm(`关闭 ${file.name}？未保存的更改会丢失。`);
+      const shouldClose = await confirm(`关闭 ${file.name}？未保存的更改会丢失。`);
       if (!shouldClose) return false;
     }
 
@@ -174,9 +175,9 @@ export const useEditorStore = defineStore('editor', () => {
     return true;
   }
 
-  function closeActiveFile(): boolean {
+  async function closeActiveFile(): Promise<boolean> {
     if (!activePath.value) return false;
-    return closeFile(activePath.value);
+    return await closeFile(activePath.value);
   }
 
   return {

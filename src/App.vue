@@ -11,6 +11,7 @@ import { useEditorStore } from './stores/editorStore';
 import { useTerminalStore } from './stores/terminalStore';
 import { useThemeStore } from './stores/themeStore';
 import { useShortcutsStore } from './stores/shortcutsStore';
+import { confirm } from './utils/confirm';
 
 const store = useTerminalStore();
 const editorStore = useEditorStore();
@@ -71,7 +72,7 @@ async function updateMaximizedState() {
   isMaximized.value = await getCurrentWindow().isMaximized();
 }
 
-function handleKeydown(e: KeyboardEvent) {
+async function handleKeydown(e: KeyboardEvent) {
   if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S') && editorStore.activeFile) {
     e.preventDefault();
     void editorStore.saveActiveFile();
@@ -93,7 +94,7 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault();
     if (store.activeTabId) {
       const tab = store.tabs.find((t) => t.id === store.activeTabId);
-      if (tab && confirm(`关闭 ${tab.title}？`)) {
+      if (tab && await confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
       }
     }
@@ -171,7 +172,7 @@ function handleKeydown(e: KeyboardEvent) {
       const tab = store.tabs.find((t) => t.id === store.activeTabId);
       if (tab && tab.panes.length > 1 && tab.activePaneId) {
         store.closePane(store.activeTabId, tab.activePaneId);
-      } else if (tab && confirm(`关闭 ${tab.title}？`)) {
+      } else if (tab && await confirm(`关闭 ${tab.title}？`)) {
         store.removeTab(store.activeTabId);
       }
     }

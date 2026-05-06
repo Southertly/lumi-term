@@ -7,6 +7,7 @@ import {
   SHORTCUT_LABELS, SHORTCUT_GROUPS,
   type ShortcutAction,
 } from '../stores/shortcutsStore';
+import { confirm } from '../utils/confirm';
 
 defineProps<{ visible: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -52,8 +53,8 @@ function handleRebindKey(e: KeyboardEvent) {
   rebindError.value = '';
 }
 
-function confirmReset() {
-  if (confirm('重置所有快捷键为默认值？')) {
+async function confirmReset() {
+  if (await confirm('重置所有快捷键为默认值？')) {
     shortcutsStore.resetAll();
   }
 }

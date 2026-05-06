@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { nextTick, ref } from 'vue';
 import { showError } from '../utils/toast';
+import { confirm } from '../utils/confirm';
 
 interface FileEntry {
   name: string;
@@ -170,7 +171,7 @@ const handleNewFolder = async () => {
 const handleDelete = async () => {
   closeContextMenu();
   const label = props.entry.kind === 'folder' ? '文件夹' : '文件';
-  if (!confirm(`确定删除${label}「${props.entry.name}」？`)) return;
+  if (!await confirm(`确定删除${label}「${props.entry.name}」？`)) return;
   try {
     await invoke('delete_path_cmd', { path: props.entry.path });
     emit('refresh');

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { useTerminalStore, type ShellType } from '../stores/terminalStore';
+import { confirm } from '../utils/confirm';
 
 const store = useTerminalStore();
 const dropdownOpen = ref(false);
@@ -72,11 +73,11 @@ function openTab(shellType: ShellType) {
   dropdownOpen.value = false;
 }
 
-function closeTab(e: MouseEvent, tabId: string) {
+async function closeTab(e: MouseEvent, tabId: string) {
   e.stopPropagation();
   const tab = store.tabs.find((t) => t.id === tabId);
   if (!tab) return;
-  if (confirm(`关闭 ${tab.title}？`)) {
+  if (await confirm(`关闭 ${tab.title}？`)) {
     store.removeTab(tabId);
   }
 }
@@ -223,13 +224,13 @@ function handleRename() {
   });
 }
 
-function handleCloseTab() {
+async function handleCloseTab() {
   if (!contextMenuState.value) return;
   const tabId = contextMenuState.value.targetTabId;
   contextMenuState.value = null;
   const tab = store.tabs.find((t) => t.id === tabId);
   if (!tab) return;
-  if (confirm(`关闭 ${tab.title}？`)) {
+  if (await confirm(`关闭 ${tab.title}？`)) {
     store.removeTab(tabId);
   }
 }
