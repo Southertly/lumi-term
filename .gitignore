@@ -27,3 +27,10 @@ dist-ssr
 # Local tooling artifacts
 .playwright-mcp/
 .gstack/
+
+# Claude Code artifacts
+.claude/worktrees/
+.claude/settings.local.json
+
+# gstack temporary files
+.superpowers/brainstorm/
