@@ -155,13 +155,17 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  async function closeFile(path: string): Promise<boolean> {
+  async function closeFile(path: string, force = false): Promise<boolean> {
     const index = files.value.findIndex((file) => file.path === path);
     if (index === -1) return false;
 
     const file = files.value[index];
-    if (file.content !== file.savedContent) {
-      const shouldClose = await confirm(`关闭 ${file.name}？未保存的更改会丢失。`);
+    if (!force && file.content !== file.savedContent) {
+      const shouldClose = await confirm({
+        title: '关闭文件',
+        message: `关闭 ${file.name}？未保存的更改会丢失。`,
+        type: 'warning',
+      });
       if (!shouldClose) return false;
     }
 

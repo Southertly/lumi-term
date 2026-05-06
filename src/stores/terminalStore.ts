@@ -154,16 +154,11 @@ export const useTerminalStore = defineStore('terminal', () => {
       });
       if (!shouldContinue) return;
 
-      // Close all open files
+      // Force close all open files without individual confirmation
       const filesToClose = [...editorStore.files];
       for (const file of filesToClose) {
-        // Force close without confirmation since we already confirmed above
-        const index = editorStore.files.findIndex((f) => f.path === file.path);
-        if (index !== -1) {
-          editorStore.files.splice(index, 1);
-        }
+        await editorStore.closeFile(file.path, true);
       }
-      editorStore.activePath = null;
     }
 
     currentWorkspacePath.value = normalized;
