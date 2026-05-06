@@ -140,16 +140,39 @@ const handleNewFile = async () => {
   closeContextMenu();
   const name = prompt('新建文件名:');
   if (!name?.trim()) return;
-  try {
-    await invoke<string>('create_file_cmd', { parentPath: props.entry.path, name: name.trim() });
-    if (props.entry.kind === 'folder') {
-      expanded.value = true;
-      await refreshChildren();
+
+  const createFile = async (overwrite: boolean = false) => {
+    try {
+      if (overwrite) {
+        // 覆盖模式：先删除再创建
+        const filePath = `${props.entry.path}/${name.trim()}`;
+        await invoke('delete_path_cmd', { path: filePath });
+      }
+      await invoke<string>('create_file_cmd', { parentPath: props.entry.path, name: name.trim() });
+      if (props.entry.kind === 'folder') {
+        expanded.value = true;
+        await refreshChildren();
+      }
+      emit('refresh');
+    } catch (e) {
+      const error = String(e);
+      if (!overwrite && error.startsWith('FILE_EXISTS:')) {
+        const fileName = error.substring('FILE_EXISTS:'.length);
+        const shouldOverwrite = await confirm({
+          title: '文件已存在',
+          message: `文件 ${fileName} 已存在，是否覆盖？`,
+          type: 'warning',
+        });
+        if (shouldOverwrite) {
+          await createFile(true);
+        }
+      } else {
+        showError(error);
+      }
     }
-    emit('refresh');
-  } catch (e) {
-    showError(String(e));
-  }
+  };
+
+  await createFile();
 };
 
 const handleNewFolder = async () => {

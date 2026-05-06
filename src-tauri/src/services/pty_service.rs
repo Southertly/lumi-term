@@ -345,7 +345,11 @@ pub fn create_file(parent_path: &str, name: &str) -> Result<String, String> {
     let parent = validate_workspace_directory(parent_path)?;
     let file_path = parent.join(validated_name);
     if file_path.exists() {
-        return Err(format!("文件已存在: {}", validated_name));
+        if file_path.is_file() {
+            return Err(format!("FILE_EXISTS:{}", validated_name));
+        } else {
+            return Err(format!("文件夹已存在，无法创建同名文件: {}", validated_name));
+        }
     }
     fs::File::create(&file_path).map_err(|e| format!("创建文件失败: {}", e))?;
     Ok(display_path(&file_path))
@@ -356,7 +360,10 @@ pub fn create_folder(parent_path: &str, name: &str) -> Result<String, String> {
     let parent = validate_workspace_directory(parent_path)?;
     let dir_path = parent.join(validated_name);
     if dir_path.exists() {
-        return Err(format!("文件夹已存在: {}", validated_name));
+        if dir_path.is_dir() {
+            return Err(format!("文件夹已存在: {}", validated_name));
+        }
+        // 如果是文件，允许创建同名文件夹（文件系统会处理冲突）
     }
     fs::create_dir(&dir_path).map_err(|e| format!("创建文件夹失败: {}", e))?;
     Ok(display_path(&dir_path))
