@@ -202,19 +202,28 @@ const moveWorkspaceSelection = (direction: 1 | -1) => {
 };
 
 const handleWorkspaceBrowserKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    moveWorkspaceSelection(1);
-    return;
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    moveWorkspaceSelection(-1);
-    return;
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    confirmSelectedWorkspace();
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      moveWorkspaceSelection(1);
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      moveWorkspaceSelection(-1);
+      break;
+    case 'Enter':
+      event.preventDefault();
+      confirmSelectedWorkspace();
+      break;
+    case 'Escape':
+      event.preventDefault();
+      showWorkspaceBrowser.value = false;
+      break;
+    case 'Tab':
+      // Allow Tab to move focus naturally
+      break;
+    default:
+      break;
   }
 };
 

@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
+import { useEditorStore } from './editorStore';
 
 export type ShellType = 'powershell' | 'cmd' | 'wsl2';
 
@@ -138,9 +139,33 @@ export const useTerminalStore = defineStore('terminal', () => {
     return fallback;
   };
 
-  function setCurrentWorkspace(path: string) {
+  async function setCurrentWorkspace(path: string) {
     const normalized = normalizePath(path);
     if (!normalized) return;
+
+    // Check if there are open files in the editor
+    const editorStore = useEditorStore();
+    if (editorStore.hasOpenFiles) {
+      const { confirm } = await import('../utils/confirm');
+      const shouldContinue = await confirm({
+        title: '切换工作区',
+        message: '切换工作区将关闭所有打开的文件。是否继续？',
+        type: 'warning',
+      });
+      if (!shouldContinue) return;
+
+      // Close all open files
+      const filesToClose = [...editorStore.files];
+      for (const file of filesToClose) {
+        // Force close without confirmation since we already confirmed above
+        const index = editorStore.files.findIndex((f) => f.path === file.path);
+        if (index !== -1) {
+          editorStore.files.splice(index, 1);
+        }
+      }
+      editorStore.activePath = null;
+    }
+
     currentWorkspacePath.value = normalized;
     addRecentWorkspace(normalized);
 
