@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { nextTick, ref } from 'vue';
+import { showError } from '../utils/toast';
 
 interface FileEntry {
   name: string;
@@ -100,7 +101,7 @@ const confirmRename = async () => {
     await invoke<string>('rename_path_cmd', { oldPath: props.entry.path, newName });
     emit('refresh');
   } catch (e) {
-    alert(String(e));
+    showError(String(e));
   }
   renaming.value = false;
 };
@@ -131,7 +132,7 @@ const handleNewFile = async () => {
     }
     emit('refresh');
   } catch (e) {
-    alert(String(e));
+    showError(String(e));
   }
 };
 
@@ -147,7 +148,7 @@ const handleNewFolder = async () => {
     }
     emit('refresh');
   } catch (e) {
-    alert(String(e));
+    showError(String(e));
   }
 };
 
@@ -159,7 +160,7 @@ const handleDelete = async () => {
     await invoke('delete_path_cmd', { path: props.entry.path });
     emit('refresh');
   } catch (e) {
-    alert(String(e));
+    showError(String(e));
   }
 };
 </script>
