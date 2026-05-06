@@ -50,16 +50,26 @@ export const useEditorStore = defineStore('editor', () => {
     return file ? file.content !== file.savedContent : false;
   }
 
+  /**
+   * Opens a file and loads its content
+   *
+   * Race condition prevention: Check pendingOpens BEFORE checking files.value
+   * to prevent duplicate loading when openFile is called multiple times rapidly.
+   *
+   * Memory leak prevention: pendingOpens Map is cleaned up in the finally block
+   * to ensure all error paths release the Promise reference.
+   */
   async function openFile(path: string): Promise<EditorFile | null> {
+    // Check pending first to prevent race condition
+    const pendingOpen = pendingOpens.get(path);
+    if (pendingOpen) return pendingOpen;
+
     const existing = files.value.find((file) => file.path === path);
     if (existing) {
       activePath.value = existing.path;
       openError.value = '';
       return existing;
     }
-
-    const pendingOpen = pendingOpens.get(path);
-    if (pendingOpen) return pendingOpen;
 
     const file: EditorFile = {
       path,

@@ -313,35 +313,65 @@ fn walk_search(dir: &Path, query: &str, depth: usize, results: &mut Vec<FileEntr
     }
 }
 
+/// Validates a filename to prevent path traversal attacks
+/// Returns the trimmed filename if valid, or an error if invalid
+fn validate_filename(name: &str) -> Result<&str, String> {
+    let trimmed = name.trim();
+
+    if trimmed.is_empty() {
+        return Err("文件名不能为空".to_string());
+    }
+
+    // Prevent path traversal with / or \
+    if trimmed.contains('/') || trimmed.contains('\\') {
+        return Err("文件名不能包含路径分隔符".to_string());
+    }
+
+    // Prevent . and .. directory references
+    if trimmed == "." || trimmed == ".." {
+        return Err("文件名不能是 . 或 ..".to_string());
+    }
+
+    // Prevent null bytes
+    if trimmed.contains('\0') {
+        return Err("文件名不能包含空字符".to_string());
+    }
+
+    Ok(trimmed)
+}
+
 pub fn create_file(parent_path: &str, name: &str) -> Result<String, String> {
+    let validated_name = validate_filename(name)?;
     let parent = validate_workspace_directory(parent_path)?;
-    let file_path = parent.join(name);
+    let file_path = parent.join(validated_name);
     if file_path.exists() {
-        return Err(format!("文件已存在: {}", name));
+        return Err(format!("文件已存在: {}", validated_name));
     }
     fs::File::create(&file_path).map_err(|e| format!("创建文件失败: {}", e))?;
     Ok(display_path(&file_path))
 }
 
 pub fn create_folder(parent_path: &str, name: &str) -> Result<String, String> {
+    let validated_name = validate_filename(name)?;
     let parent = validate_workspace_directory(parent_path)?;
-    let dir_path = parent.join(name);
+    let dir_path = parent.join(validated_name);
     if dir_path.exists() {
-        return Err(format!("文件夹已存在: {}", name));
+        return Err(format!("文件夹已存在: {}", validated_name));
     }
     fs::create_dir(&dir_path).map_err(|e| format!("创建文件夹失败: {}", e))?;
     Ok(display_path(&dir_path))
 }
 
 pub fn rename_path(old_path: &str, new_name: &str) -> Result<String, String> {
+    let validated_name = validate_filename(new_name)?;
     let old = Path::new(old_path.trim());
     if !old.exists() {
         return Err("路径不存在".to_string());
     }
     let parent = old.parent().ok_or("无法获取父目录")?;
-    let new_path = parent.join(new_name);
+    let new_path = parent.join(validated_name);
     if new_path.exists() {
-        return Err(format!("目标已存在: {}", new_name));
+        return Err(format!("目标已存在: {}", validated_name));
     }
     fs::rename(old, &new_path).map_err(|e| format!("重命名失败: {}", e))?;
     Ok(display_path(&new_path))
