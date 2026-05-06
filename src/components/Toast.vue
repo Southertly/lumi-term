@@ -16,7 +16,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const visible = ref(false);
+const visible = ref(true);
 
 const iconMap = {
   success: '✓',
@@ -28,7 +28,6 @@ const iconMap = {
 const icon = computed(() => iconMap[props.type]);
 
 onMounted(() => {
-  visible.value = true;
   if (props.duration > 0) {
     setTimeout(() => {
       close();
