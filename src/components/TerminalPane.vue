@@ -287,7 +287,8 @@ onUnmounted(() => {
       :style="{ background: themeStore.getCurrentTheme().terminal.background }"
     />
 
-    <!-- Command block overlay -->
+    <!-- Command block overlay (temporarily disabled - UI needs optimization) -->
+    <!--
     <div class="block-overlay" aria-hidden="true">
       <CommandBlock
         v-for="block in blockStore.getBlocks(paneId)"
@@ -295,6 +296,7 @@ onUnmounted(() => {
         :block="block"
       />
     </div>
+    -->
 
     <!-- Right-click context menu -->
     <Teleport to="body">
