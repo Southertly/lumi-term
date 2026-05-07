@@ -444,14 +444,26 @@ fn build_shell_command(shell: &str, _cwd: Option<&Path>) -> (String, Vec<String>
             "-NoLogo".to_string(),
             "-NoExit".to_string(),
             "-Command".to_string(),
-            "try { Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView } catch {}; \
-             $global:_lf = [IO.Path]::Combine($env:TEMP, 'lumiterm_cwd.txt'); \
-             $global:_op = $function:prompt; \
-             $function:prompt = { \
-               try { (Get-Location).Path | Set-Content $global:_lf -NoNewline } catch {}; \
-               if ($global:_op) { & $global:_op } else { 'PS ' + $executionContext.SessionState.Path.CurrentLocation + '> ' } \
-             }"
-                .to_string(),
+            concat!(
+                "try { Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView } catch {}; ",
+                "$global:_lf = [IO.Path]::Combine($env:TEMP, 'lumiterm_cwd.txt'); ",
+                "$global:_op = $function:prompt; ",
+                "$function:prompt = { ",
+                  "Write-Host \"`e]133;A`e\\\" -NoNewline; ",
+                  "try { (Get-Location).Path | Set-Content $global:_lf -NoNewline } catch {}; ",
+                  "$r = if ($global:_op) { & $global:_op } else { 'PS ' + $executionContext.SessionState.Path.CurrentLocation + '> ' }; ",
+                  "Write-Host \"`e]133;B`e\\\" -NoNewline; ",
+                  "$r ",
+                "}; ",
+                "Set-PSReadLineKeyHandler -Key Enter -ScriptBlock { ",
+                  "Write-Host \"`e]133;C`e\\\" -NoNewline; ",
+                  "[Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine(); ",
+                "}; ",
+                "function global:Prompt-Done { ",
+                  "param([int]$code); ",
+                  "Write-Host \"`e]133;D;$code`e\\\" -NoNewline ",
+                "}"
+            ).to_string(),
         ]
     } else {
         Vec::new()
@@ -924,5 +936,15 @@ mod tests {
         assert!(error.contains("content is too large"));
         assert_eq!(fs::read_to_string(&file).unwrap(), "old");
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn powershell_args_include_osc133_prompt_hook() {
+        let (_, args) = build_shell_command("powershell.exe", None);
+        let cmd_str = args.join(" ");
+        assert!(cmd_str.contains("133;A"), "missing OSC 133;A (prompt start)");
+        assert!(cmd_str.contains("133;B"), "missing OSC 133;B (command start)");
+        assert!(cmd_str.contains("133;C"), "missing OSC 133;C (exec start)");
+        assert!(cmd_str.contains("133;D"), "missing OSC 133;D (exec end)");
     }
 }
