@@ -7,6 +7,9 @@ import { useTerminalStore, type ShellType } from '../stores/terminalStore';
 import { useThemeStore } from '../stores/themeStore';
 import { useFontStore } from '../stores/fontStore';
 import { useShortcutsStore } from '../stores/shortcutsStore';
+import { OscParser } from '../utils/oscParser';
+import { useCommandBlockStore } from '../stores/commandBlockStore';
+import CommandBlock from './CommandBlock.vue';
 
 const props = defineProps<{
   paneId: string;
@@ -20,6 +23,9 @@ const store = useTerminalStore();
 const themeStore = useThemeStore();
 const fontStore = useFontStore();
 const shortcutsStore = useShortcutsStore();
+const blockStore = useCommandBlockStore();
+const oscParser = new OscParser();
+const pendingCommand = ref('');
 
 // ── Pane close button ──
 const showCloseButton = computed(() => {
@@ -99,7 +105,27 @@ async function init(container: HTMLElement) {
   const channel = new Channel<number[]>();
   channel.onmessage = (rawData) => {
     const bytes = new Uint8Array(rawData);
-    terminal.write(bytes);
+    const text = new TextDecoder().decode(bytes);
+    const { cleanData, events } = oscParser.feed(text);
+
+    // Write clean data (OSC stripped) to xterm
+    if (cleanData) terminal.write(cleanData);
+
+    // Process OSC events
+    for (const event of events) {
+      if (event.type === 'command_start') {
+        // Capture what the user typed (xterm buffer since last prompt)
+        pendingCommand.value = terminal.buffer.active
+          .getLine(terminal.buffer.active.cursorY)
+          ?.translateToString(true)
+          .trim() ?? '';
+      } else if (event.type === 'exec_start') {
+        blockStore.startBlock(props.paneId, pendingCommand.value);
+        pendingCommand.value = '';
+      } else if (event.type === 'exec_end') {
+        blockStore.endBlock(props.paneId, event.exitCode ?? 0);
+      }
+    }
   };
 
   // ── Spawn PTY ──
@@ -228,6 +254,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   isMounted = false;
+  blockStore.clearBlocks(props.paneId);
   window.removeEventListener('lumiterm:focus-pane', handleFocusPane);
   window.removeEventListener('lumiterm:copy', handleTerminalCopy);
   window.removeEventListener('lumiterm:paste', handleTerminalPaste);
@@ -259,6 +286,15 @@ onUnmounted(() => {
       :class="{ 'pane-active': paneActive }"
       :style="{ background: themeStore.getCurrentTheme().terminal.background }"
     />
+
+    <!-- Command block overlay -->
+    <div class="block-overlay" aria-hidden="true">
+      <CommandBlock
+        v-for="block in blockStore.getBlocks(paneId)"
+        :key="block.id"
+        :block="block"
+      />
+    </div>
 
     <!-- Right-click context menu -->
     <Teleport to="body">
@@ -340,6 +376,18 @@ onUnmounted(() => {
 
 .pane-close-btn:hover {
   background: rgba(220, 50, 50, 0.8);
+}
+
+.block-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  pointer-events: none;
+  z-index: 10;
+  padding: 4px;
 }
 </style>
 
