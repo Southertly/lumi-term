@@ -9,7 +9,6 @@ import { useFontStore } from '../stores/fontStore';
 import { useShortcutsStore } from '../stores/shortcutsStore';
 import { OscParser } from '../utils/oscParser';
 import { useCommandBlockStore } from '../stores/commandBlockStore';
-import CommandBlock from './CommandBlock.vue';
 import CommandStatusBar from './CommandStatusBar.vue';
 
 const props = defineProps<{
