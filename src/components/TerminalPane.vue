@@ -10,6 +10,7 @@ import { useShortcutsStore } from '../stores/shortcutsStore';
 import { OscParser } from '../utils/oscParser';
 import { useCommandBlockStore } from '../stores/commandBlockStore';
 import CommandBlock from './CommandBlock.vue';
+import CommandStatusBar from './CommandStatusBar.vue';
 
 const props = defineProps<{
   paneId: string;
@@ -287,16 +288,8 @@ onUnmounted(() => {
       :style="{ background: themeStore.getCurrentTheme().terminal.background }"
     />
 
-    <!-- Command block overlay (temporarily disabled - UI needs optimization) -->
-    <!--
-    <div class="block-overlay" aria-hidden="true">
-      <CommandBlock
-        v-for="block in blockStore.getBlocks(paneId)"
-        :key="block.id"
-        :block="block"
-      />
-    </div>
-    -->
+    <!-- Command status bar -->
+    <CommandStatusBar :pane-id="paneId" />
 
     <!-- Right-click context menu -->
     <Teleport to="body">
@@ -342,6 +335,7 @@ onUnmounted(() => {
 .terminal-container {
   position: absolute;
   inset: 0;
+  bottom: 28px;
   overflow: hidden;
 }
 
