@@ -3,6 +3,7 @@ export type OscEventType = 'prompt_start' | 'command_start' | 'exec_start' | 'ex
 export interface OscEvent {
   type: OscEventType;
   exitCode?: number;
+  command?: string;
   timestamp: number;
 }
 
@@ -60,6 +61,7 @@ function parseOscPayload(payload: string): OscEvent | null {
   if (code === 'A') return { type: 'prompt_start', timestamp };
   if (code === 'B') return { type: 'command_start', timestamp };
   if (code === 'C') return { type: 'exec_start', timestamp };
+  if (code.startsWith('C;')) return { type: 'exec_start', command: code.slice(2), timestamp };
   if (code.startsWith('D')) {
     const exitCode = parseInt(code.slice(2), 10);
     return { type: 'exec_end', exitCode: isNaN(exitCode) ? 0 : exitCode, timestamp };

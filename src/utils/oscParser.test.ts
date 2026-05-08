@@ -23,6 +23,13 @@ describe('OscParser', () => {
     expect(result.events[0].type).toBe('exec_start');
   });
 
+  it('parses OSC 133;C;command and includes command text', () => {
+    const parser = new OscParser();
+    const result = parser.feed('\x1b]133;C;echo hello\x1b\\');
+    expect(result.events[0].type).toBe('exec_start');
+    expect(result.events[0].command).toBe('echo hello');
+  });
+
   it('strips OSC 133;D;0 and emits exec_end with exitCode 0', () => {
     const parser = new OscParser();
     const result = parser.feed('\x1b]133;D;0\x1b\\');

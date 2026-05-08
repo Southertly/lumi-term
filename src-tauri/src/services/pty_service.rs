@@ -464,7 +464,10 @@ fn build_shell_command(shell: &str, _cwd: Option<&Path>) -> (String, Vec<String>
                   "$r ",
                 "}; ",
                 "Set-PSReadLineKeyHandler -Key Enter -ScriptBlock { ",
-                  "Write-Host \"`e]133;C`e\\\" -NoNewline; ",
+                  "$line = $null; $cursor = $null; ",
+                  "[Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor); ",
+                  "$line = ($line -replace '\\x1b', '') -replace ';', ','; ",
+                  "Write-Host \"`e]133;C;$line`e\\\" -NoNewline; ",
                   "[Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine() ",
                 "}"
             ).to_string(),

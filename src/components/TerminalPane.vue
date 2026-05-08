@@ -114,13 +114,10 @@ async function init(container: HTMLElement) {
     // Process OSC events
     for (const event of events) {
       if (event.type === 'command_start') {
-        // Capture what the user typed (xterm buffer since last prompt)
-        pendingCommand.value = terminal.buffer.active
-          .getLine(terminal.buffer.active.cursorY)
-          ?.translateToString(true)
-          .trim() ?? '';
+        pendingCommand.value = '';
       } else if (event.type === 'exec_start') {
-        blockStore.startBlock(props.paneId, pendingCommand.value);
+        const command = event.command?.trim() || pendingCommand.value;
+        blockStore.startBlock(props.paneId, command);
         pendingCommand.value = '';
       } else if (event.type === 'exec_end') {
         blockStore.endBlock(props.paneId, event.exitCode ?? 0);
