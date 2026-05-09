@@ -92,8 +92,18 @@ const refreshChildren = async () => {
   }
 };
 
+const BINARY_EXTENSIONS = new Set([
+  'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'webp', 'tiff',
+  'exe', 'dll', 'msi', 'bin', 'obj', 'lib', 'pdb',
+  'zip', 'tar', 'gz', 'rar', '7z',
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  'mp3', 'mp4', 'wav', 'avi', 'mov', 'mkv',
+  'ttf', 'otf', 'woff', 'woff2',
+]);
+
 const openFile = () => {
   if (renaming.value || props.entry.kind !== 'file') return;
+  if (BINARY_EXTENSIONS.has(props.entry.extension.toLowerCase())) return;
   emit('open-file', props.entry.path);
 };
 

@@ -108,11 +108,8 @@ export const useEditorStore = defineStore('editor', () => {
         const index = files.value.findIndex((f) => f.path.toLowerCase() === normalizedPath);
         if (index === -1) return null;
         const message = errorMessage(error);
-        openError.value = message;
-        files.value.splice(index, 1);
-        if (activePath.value?.toLowerCase() === normalizedPath) {
-          activePath.value = files.value[files.value.length - 1]?.path ?? null;
-        }
+        // Keep the tab open but show error state instead of removing it
+        files.value.splice(index, 1, { ...files.value[index], loading: false, error: message });
         return null;
       })
       .finally(() => {
