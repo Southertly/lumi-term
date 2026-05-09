@@ -61,11 +61,13 @@ export const useEditorStore = defineStore('editor', () => {
    * to ensure all error paths release the Promise reference.
    */
   async function openFile(path: string): Promise<EditorFile | null> {
+    const normalizedPath = path.toLowerCase();
+
     // Check pending first to prevent race condition
-    const pendingOpen = pendingOpens.get(path);
+    const pendingOpen = pendingOpens.get(normalizedPath);
     if (pendingOpen) return pendingOpen;
 
-    const existing = files.value.find((file) => file.path === path);
+    const existing = files.value.find((file) => file.path.toLowerCase() === normalizedPath);
     if (existing) {
       activePath.value = existing.path;
       openError.value = '';
@@ -96,29 +98,28 @@ export const useEditorStore = defineStore('editor', () => {
           saving: false,
           error: '',
         };
-        const index = files.value.indexOf(file);
+        const index = files.value.findIndex((f) => f.path.toLowerCase() === normalizedPath);
         if (index === -1) return null;
         files.value.splice(index, 1, loadedFile);
         activePath.value = loadedFile.path;
         return loadedFile;
       })
       .catch((error) => {
-        const index = files.value.indexOf(file);
+        const index = files.value.findIndex((f) => f.path.toLowerCase() === normalizedPath);
         if (index === -1) return null;
         const message = errorMessage(error);
         openError.value = message;
-        const currentPath = file.path;
         files.value.splice(index, 1);
-        if (activePath.value === currentPath) {
+        if (activePath.value?.toLowerCase() === normalizedPath) {
           activePath.value = files.value[files.value.length - 1]?.path ?? null;
         }
         return null;
       })
       .finally(() => {
-        pendingOpens.delete(path);
+        pendingOpens.delete(normalizedPath);
       });
 
-    pendingOpens.set(path, request);
+    pendingOpens.set(normalizedPath, request);
     return request;
   }
 
