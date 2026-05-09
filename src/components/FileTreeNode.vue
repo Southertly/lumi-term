@@ -220,6 +220,7 @@ const handleDelete = async () => {
       class="tree-row"
       :style="{ paddingLeft: `${depth * 16 + 8}px` }"
       @click="toggle"
+      @dblclick="openFile"
       @contextmenu.prevent="onContextMenu"
     >
       <span
@@ -237,7 +238,7 @@ const handleDelete = async () => {
         @keydown.escape.prevent="cancelRename"
         @click.stop
       />
-      <span v-else class="tree-name" :title="entry.path" @dblclick.stop="openFile">{{ entry.name }}</span>
+      <span v-else class="tree-name" :title="entry.path">{{ entry.name }}</span>
     </div>
     <div v-if="loading" class="tree-loading" :style="{ paddingLeft: `${(depth + 1) * 16 + 8}px` }">
       加载中…
