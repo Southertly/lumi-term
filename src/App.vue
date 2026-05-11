@@ -23,6 +23,8 @@ const onOpenSettings = () => { showSettings.value = true; };
 const uiVars = computed(() => {
   const theme = themeStore.getCurrentTheme();
   const ui = theme.ui;
+  // glassOpacity: 0=不透明 100=全透明，转成 alpha 值（0.0~1.0）
+  const alpha = (1 - themeStore.glassOpacity / 100).toFixed(2);
   return {
     '--ui-bg': ui.bg,
     '--ui-bg-light': ui.bgLight,
@@ -37,6 +39,7 @@ const uiVars = computed(() => {
     '--ui-hover': ui.hover,
     '--ui-bg-rgb': theme.rgb.uiBg,
     '--terminal-bg-rgb': theme.rgb.terminalBg,
+    '--glass-alpha': alpha,
   };
 });
 
@@ -389,17 +392,25 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; background: tran
 }
 
 .glass-effect {
-  background: rgba(var(--ui-bg-rgb), 0.72) !important;
+  background: rgba(var(--ui-bg-rgb), var(--glass-alpha)) !important;
   backdrop-filter: blur(24px) saturate(200%);
   -webkit-backdrop-filter: blur(24px) saturate(200%);
 }
 
 .glass-effect .titlebar {
-  background: rgba(var(--ui-bg-rgb), 0.60) !important;
+  background: rgba(var(--ui-bg-rgb), calc(var(--glass-alpha) * 0.85)) !important;
 }
 
 .glass-effect .terminal-container {
-  background: rgba(var(--terminal-bg-rgb), 0.82) !important;
+  background: rgba(var(--terminal-bg-rgb), var(--glass-alpha)) !important;
+}
+
+/* xterm 内部层也必须透明，否则 .xterm-viewport 会遮住 backdrop-filter */
+.glass-effect .xterm-viewport,
+.glass-effect .xterm-screen,
+.glass-effect .xterm-screen canvas {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 @supports not (backdrop-filter: blur(24px)) {

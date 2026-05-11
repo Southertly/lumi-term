@@ -118,6 +118,18 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
               </span>
             </label>
 
+            <div v-if="themeStore.glassEffectEnabled" class="control-group glass-opacity-group">
+              <label class="control-label">
+                透明度 <span class="control-value">{{ themeStore.glassOpacity }}%</span>
+              </label>
+              <input
+                v-model.number="themeStore.glassOpacity"
+                type="range" min="0" max="80" step="1"
+                class="control-slider"
+              />
+              <div class="range-labels"><span>不透明</span><span>更透</span></div>
+            </div>
+
             <div class="theme-grid">
               <div
                 v-for="t in themeStore.getAllThemes()"
@@ -495,5 +507,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
 .glass-toggle-hint {
   font-size: 10px;
   color: var(--ui-fg-muted);
+}
+
+.glass-opacity-group {
+  margin-top: -4px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  background: var(--ui-bg);
 }
 </style>
