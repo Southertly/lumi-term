@@ -1,5 +1,5 @@
 // 解析 hex 到 [r, g, b]
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   if (typeof hex !== 'string') return [128, 128, 128];
   let value = hex.trim().replace(/^#/, '');
   if (value.length === 3) value = value.split('').map((c) => c + c).join('');
@@ -11,13 +11,13 @@ function hexToRgb(hex) {
   ];
 }
 
-function rgbToHex(r, g, b) {
+export function rgbToHex(r, g, b) {
   const clamp = (n) => Math.max(0, Math.min(255, Math.round(n)));
   const h = (n) => clamp(n).toString(16).padStart(2, '0');
   return `#${h(r)}${h(g)}${h(b)}`;
 }
 
-function hexToRgbString(hex) {
+export function hexToRgbString(hex) {
   const [r, g, b] = hexToRgb(hex);
   return `${r}, ${g}, ${b}`;
 }
@@ -64,7 +64,7 @@ function hslToRgb(h, s, l) {
   return [r * 255, g * 255, b * 255];
 }
 
-function shiftLightness(hex, delta) {
+export function shiftLightness(hex, delta) {
   const [r, g, b] = hexToRgb(hex);
   const [h, s, l] = rgbToHsl(r, g, b);
   const newL = Math.max(0, Math.min(1, l + delta));
@@ -72,16 +72,8 @@ function shiftLightness(hex, delta) {
   return rgbToHex(nr, ng, nb);
 }
 
-function getLightness(hex) {
+export function getLightness(hex) {
   const [r, g, b] = hexToRgb(hex);
   const [, , l] = rgbToHsl(r, g, b);
   return l;
 }
-
-module.exports = {
-  hexToRgb,
-  rgbToHex,
-  hexToRgbString,
-  shiftLightness,
-  getLightness,
-};
