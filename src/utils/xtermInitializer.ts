@@ -73,6 +73,13 @@ export function initTerminal(
 
   terminal.open(container);
 
+  // xterm sets viewport's backgroundColor via JS after open(); clear it so
+  // the canvas renderer can show through when transparency is requested.
+  if (options?.transparent) {
+    const viewport = container.querySelector<HTMLElement>('.xterm-viewport');
+    if (viewport) viewport.style.backgroundColor = 'transparent';
+  }
+
   if (!options?.transparent) {
     try {
       const webglAddon = new WebglAddon();
