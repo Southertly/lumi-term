@@ -94,11 +94,16 @@ const tabCwd = computed(() => store.tabs.find((t) => t.id === props.tabId)?.cwd 
 
 // ── Main init ──
 async function init(container: HTMLElement) {
-  instance = initTerminal(container, themeStore.getCurrentTheme().terminal, {
-    fontFamily: fontStore.fontFamily,
-    fontSize: fontStore.fontSize,
-    lineHeight: fontStore.lineHeight,
-  });
+  instance = initTerminal(
+    container,
+    themeStore.getCurrentTheme().terminal,
+    {
+      fontFamily: fontStore.fontFamily,
+      fontSize: fontStore.fontSize,
+      lineHeight: fontStore.lineHeight,
+    },
+    { transparent: themeStore.glassEffectEnabled },
+  );
   const { terminal, fitAddon } = instance;
 
   // ── PTY output handler ──
@@ -199,7 +204,30 @@ async function init(container: HTMLElement) {
 
 // ── Watchers ──
 watch(() => themeStore.currentName, () => {
-  if (instance) instance.terminal.options.theme = themeStore.getCurrentTheme().terminal;
+  if (!instance) return;
+  const t = themeStore.getCurrentTheme().terminal;
+  instance.terminal.options.theme = themeStore.glassEffectEnabled
+    ? { ...t, background: 'rgba(0,0,0,0)' }
+    : t;
+});
+
+// Re-init the terminal when glass effect toggles — WebGL renderer can't be
+// added/removed at runtime, and switching renderer requires a fresh instance.
+watch(() => themeStore.glassEffectEnabled, async () => {
+  if (!terminalRef.value) return;
+  if (sessionId.value) {
+    invoke('close_pty_cmd', { sessionId: sessionId.value }).catch(() => {});
+    sessionId.value = '';
+  }
+  resizeObserver?.disconnect();
+  focusCleanup?.();
+  contextMenuCleanup?.();
+  instance?.dispose();
+  instance = null;
+  terminalRef.value.replaceChildren();
+  blockStore.clearBlocks(props.paneId);
+  await nextTick();
+  if (isMounted && terminalRef.value) init(terminalRef.value);
 });
 
 watch([() => fontStore.fontFamily, () => fontStore.fontSize, () => fontStore.lineHeight], () => {
@@ -281,7 +309,11 @@ onUnmounted(() => {
       ref="terminalRef"
       class="terminal-container"
       :class="{ 'pane-active': paneActive }"
-      :style="{ background: themeStore.getCurrentTheme().terminal.background }"
+      :style="{
+        background: themeStore.glassEffectEnabled
+          ? 'transparent'
+          : themeStore.getCurrentTheme().terminal.background,
+      }"
     />
 
     <!-- Command status bar -->

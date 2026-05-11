@@ -39,11 +39,22 @@ export interface FontOptions {
   lineHeight?: number;
 }
 
+export interface InitOptions {
+  transparent?: boolean;
+}
+
 export function initTerminal(
   container: HTMLElement,
   theme?: TerminalTheme,
   font?: FontOptions,
+  options?: InitOptions,
 ): TerminalInstance {
+  // WebGL renderer ignores allowTransparency, so when glass effect is on we
+  // override the theme background to fully transparent and skip WebGL.
+  const effectiveTheme = options?.transparent && theme
+    ? { ...theme, background: 'rgba(0,0,0,0)' }
+    : theme;
+
   const terminal = new Terminal({
     fontFamily: font?.fontFamily
       ? `"${font.fontFamily}", Consolas, monospace`
@@ -54,7 +65,7 @@ export function initTerminal(
     cursorStyle: 'block',
     allowTransparency: true,
     scrollback: 10000,
-    theme,
+    theme: effectiveTheme,
   });
 
   const fitAddon = new FitAddon();
@@ -62,13 +73,14 @@ export function initTerminal(
 
   terminal.open(container);
 
-  // Try WebGL, fall back to canvas
-  try {
-    const webglAddon = new WebglAddon();
-    webglAddon.onContextLoss(() => webglAddon.dispose());
-    terminal.loadAddon(webglAddon);
-  } catch {
-    // Canvas renderer is used as fallback
+  if (!options?.transparent) {
+    try {
+      const webglAddon = new WebglAddon();
+      webglAddon.onContextLoss(() => webglAddon.dispose());
+      terminal.loadAddon(webglAddon);
+    } catch {
+      // Canvas renderer is used as fallback
+    }
   }
 
   fitAddon.fit();

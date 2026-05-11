@@ -294,7 +294,7 @@ onUnmounted(() => {
 
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body, #app { width: 100%; height: 100%; overflow: hidden; }
+html, body, #app { width: 100%; height: 100%; overflow: hidden; background: transparent; }
 .app-container {
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
@@ -383,17 +383,26 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
   line-height: 1.5;
 }
 
+.glass-effect,
+.glass-effect ~ * {
+  /* 让 html/body/#app 透明，否则会遮住 backdrop-filter */
+}
+
 .glass-effect {
-  background: rgba(var(--ui-bg-rgb), 0.75) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(var(--ui-bg-rgb), 0.72) !important;
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+}
+
+.glass-effect .titlebar {
+  background: rgba(var(--ui-bg-rgb), 0.60) !important;
 }
 
 .glass-effect .terminal-container {
-  background: rgba(var(--terminal-bg-rgb), 0.85) !important;
+  background: rgba(var(--terminal-bg-rgb), 0.82) !important;
 }
 
-@supports not (backdrop-filter: blur(20px)) {
+@supports not (backdrop-filter: blur(24px)) {
   .glass-effect {
     background: rgba(var(--ui-bg-rgb), 0.92) !important;
   }
