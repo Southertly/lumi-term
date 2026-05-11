@@ -21,7 +21,8 @@ const showSettings = ref(false);
 const onOpenSettings = () => { showSettings.value = true; };
 
 const uiVars = computed(() => {
-  const ui = themeStore.getCurrentTheme().ui;
+  const theme = themeStore.getCurrentTheme();
+  const ui = theme.ui;
   return {
     '--ui-bg': ui.bg,
     '--ui-bg-light': ui.bgLight,
@@ -34,6 +35,8 @@ const uiVars = computed(() => {
     '--ui-accent': ui.accent,
     '--ui-border': ui.border,
     '--ui-hover': ui.hover,
+    '--ui-bg-rgb': theme.rgb.uiBg,
+    '--terminal-bg-rgb': theme.rgb.terminalBg,
   };
 });
 
@@ -251,7 +254,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-container" :style="uiVars" data-tauri-drag-region @mousedown="startDrag">
+  <div class="app-container" :class="{ 'glass-effect': themeStore.glassEffectEnabled }" :style="uiVars" data-tauri-drag-region @mousedown="startDrag">
     <div class="titlebar">
       <div class="titlebar-title">LumiTerm</div>
       <div class="window-controls" data-tauri-no-drag>
@@ -378,5 +381,21 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; }
   color: var(--ui-fg-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.glass-effect {
+  background: rgba(var(--ui-bg-rgb), 0.75) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.glass-effect .terminal-container {
+  background: rgba(var(--terminal-bg-rgb), 0.85) !important;
+}
+
+@supports not (backdrop-filter: blur(20px)) {
+  .glass-effect {
+    background: rgba(var(--ui-bg-rgb), 0.92) !important;
+  }
 }
 </style>
