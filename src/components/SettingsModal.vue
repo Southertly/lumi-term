@@ -105,6 +105,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
           <!-- Theme tab -->
           <div v-if="activeTab === 'theme'" class="tab-panel">
             <h2 class="panel-title">外观主题</h2>
+
+            <label class="glass-toggle">
+              <input
+                type="checkbox"
+                :checked="themeStore.glassEffectEnabled"
+                @change="themeStore.toggleGlassEffect()"
+              />
+              <span class="glass-toggle-label">
+                <span class="glass-toggle-title">启用毛玻璃效果</span>
+                <span class="glass-toggle-hint">需要 Windows 11 或更高版本；可能影响低端设备性能</span>
+              </span>
+            </label>
+
             <div class="theme-grid">
               <div
                 v-for="t in themeStore.getAllThemes()"
@@ -445,5 +458,42 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown, true));
 .shortcut-row.rebinding .shortcut-key {
   color: var(--ui-fg-muted);
   border-style: dashed;
+}
+
+.glass-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  background: var(--ui-bg);
+  cursor: pointer;
+}
+
+.glass-toggle:hover {
+  border-color: var(--ui-accent);
+}
+
+.glass-toggle input {
+  margin-top: 2px;
+  accent-color: var(--ui-accent);
+  cursor: pointer;
+}
+
+.glass-toggle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.glass-toggle-title {
+  font-size: 12px;
+  color: var(--ui-fg);
+}
+
+.glass-toggle-hint {
+  font-size: 10px;
+  color: var(--ui-fg-muted);
 }
 </style>
