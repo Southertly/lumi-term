@@ -217,7 +217,7 @@ const handleWorkspaceBrowserKeydown = (event: KeyboardEvent) => {
       break;
     case 'Escape':
       event.preventDefault();
-      showWorkspaceBrowser.value = false;
+      workspaceMenuOpen.value = false;
       break;
     case 'Tab':
       // Allow Tab to move focus naturally
