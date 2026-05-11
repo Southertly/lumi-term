@@ -1,5 +1,6 @@
 import { createApp, h } from 'vue';
-import ConfirmDialog, { type ConfirmDialogProps } from '../components/ConfirmDialog.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
+import type { ConfirmDialogProps } from '../components/ConfirmDialog.types';
 
 let dialogContainer: HTMLDivElement | null = null;
 

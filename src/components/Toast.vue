@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-
-export interface ToastProps {
-  message: string;
-  type?: 'success' | 'error' | 'info' | 'warning';
-  duration?: number;
-}
+import type { ToastProps } from './Toast.types';
 
 const props = withDefaults(defineProps<ToastProps>(), {
   type: 'info',

@@ -1,5 +1,6 @@
 import { createApp, h } from 'vue';
-import Toast, { type ToastProps } from '../components/Toast.vue';
+import Toast from '../components/Toast.vue';
+import type { ToastProps } from '../components/Toast.types';
 
 let toastContainer: HTMLDivElement | null = null;
 

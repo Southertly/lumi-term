@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-
-export interface ConfirmDialogProps {
-  title?: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  type?: 'warning' | 'danger' | 'info';
-}
+import type { ConfirmDialogProps } from './ConfirmDialog.types';
 
 withDefaults(defineProps<ConfirmDialogProps>(), {
   title: '确认',
