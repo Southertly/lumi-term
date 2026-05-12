@@ -54,7 +54,7 @@ rtk npx pnpm tauri dev
 rtk npx vitest run src/utils/oscParser.test.ts src/stores/commandBlockStore.test.ts
 
 # Rust 测试（示例）
-rtk cargo test -p lumi-term-lib powershell_args_include_osc133_prompt_hook
+rtk cargo test -p lumi-term powershell_args_include_osc133_prompt_hook
 
 # 构建
 rtk npx pnpm tauri build

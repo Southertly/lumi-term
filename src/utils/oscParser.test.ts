@@ -66,4 +66,35 @@ describe('OscParser', () => {
     expect(result.events[0].type).toBe('prompt_start');
     expect(result.events[1].type).toBe('command_start');
   });
+
+  it('handles BEL-terminated OSC sequences (used by claude and many programs)', () => {
+    const parser = new OscParser();
+    // \x1b]0;title\x07 is a BEL-terminated window title sequence
+    const result = parser.feed('\x1b]0;claude\x07\x1b[?25l');
+    expect(result.cleanData).toBe('\x1b[?25l');
+    expect(result.events).toHaveLength(0); // OSC 0 is not 133, so no event
+  });
+
+  it('does not buffer subsequent data after BEL-terminated OSC', () => {
+    const parser = new OscParser();
+    // Simulate what claude sends: title OSC then TUI content
+    const result = parser.feed('\x1b]0;✳ Claude Code\x07\x1b[38;2;215;119;87m ▐');
+    expect(result.cleanData).toBe('\x1b[38;2;215;119;87m ▐');
+  });
+
+  it('prefers earlier terminator when both BEL and ST appear', () => {
+    const parser = new OscParser();
+    // BEL comes before ST — should use BEL
+    const result = parser.feed('\x1b]133;A\x07after');
+    expect(result.cleanData).toBe('after');
+    expect(result.events[0].type).toBe('prompt_start');
+  });
+
+  it('handles mixed BEL and ST terminated sequences in one chunk', () => {
+    const parser = new OscParser();
+    const result = parser.feed('\x1b]0;title\x07text\x1b]133;A\x1b\\more');
+    expect(result.cleanData).toBe('textmore');
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0].type).toBe('prompt_start');
+  });
 });

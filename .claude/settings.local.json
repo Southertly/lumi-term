@@ -58,7 +58,9 @@
       "Bash(node -e ' *)",
       "Bash(pkill -f \"tauri dev\")",
       "Bash(C:\\\\Users\\\\liu\\\\.claude\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh *)",
-      "mcp__filesystem__list_directory"
+      "mcp__filesystem__list_directory",
+      "Read(//c/Users/liu/.claude/plans/**)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\liu\\\\.claude\\\\plans\")"
     ]
   }
 }

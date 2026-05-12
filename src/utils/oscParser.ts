@@ -13,7 +13,8 @@ export interface ParseResult {
 }
 
 const OSC_START = '\x1b]';
-const OSC_END = '\x1b\\';
+const OSC_END_ST = '\x1b\\'; // String Terminator
+const OSC_END_BEL = '\x07';  // BEL — also a valid OSC terminator (used by many programs)
 
 export class OscParser {
   private buffer = '';
@@ -34,19 +35,30 @@ export class OscParser {
       }
 
       cleanData += input.slice(i, oscStart);
-      const oscEnd = input.indexOf(OSC_END, oscStart + 2);
 
-      if (oscEnd === -1) {
+      const stPos = input.indexOf(OSC_END_ST, oscStart + 2);
+      const belPos = input.indexOf(OSC_END_BEL, oscStart + 2);
+
+      let oscEnd: number;
+      let termLen: number;
+
+      if (stPos === -1 && belPos === -1) {
         // Incomplete sequence — buffer remainder
         this.buffer = input.slice(oscStart);
         break;
+      } else if (stPos === -1 || (belPos !== -1 && belPos < stPos)) {
+        oscEnd = belPos;
+        termLen = OSC_END_BEL.length;
+      } else {
+        oscEnd = stPos;
+        termLen = OSC_END_ST.length;
       }
 
       const payload = input.slice(oscStart + 2, oscEnd);
       const event = parseOscPayload(payload);
       if (event) events.push(event);
 
-      i = oscEnd + OSC_END.length;
+      i = oscEnd + termLen;
     }
 
     return { cleanData, events };
