@@ -447,23 +447,24 @@ fn build_shell_command(shell: &str, _cwd: Option<&Path>) -> (String, Vec<String>
             concat!(
                 "try { Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView } catch {}; ",
                 "$global:_lf = [IO.Path]::Combine($env:TEMP, 'lumiterm_cwd.txt'); ",
+                "$global:_esc = [char]27; ",
                 "$global:_op = $function:prompt; ",
                 "$function:prompt = { ",
                   "$s = $?; $e = $global:LASTEXITCODE; ",
                   "$code = if ($s) { 0 } elseif ($e -ne $null -and $e -ne 0) { $e } else { 1 }; ",
-                  "Write-Host \"`e]133;D;$code`e\\\" -NoNewline; ",
-                  "Write-Host \"`e]133;A`e\\\" -NoNewline; ",
+                  "Write-Host \"$($global:_esc)]133;D;$code$($global:_esc)\\\" -NoNewline; ",
+                  "Write-Host \"$($global:_esc)]133;A$($global:_esc)\\\" -NoNewline; ",
                   "try { (Get-Location).Path | Set-Content $global:_lf -NoNewline } catch {}; ",
                   "$r = if ($global:_op) { try { & $global:_op } catch { 'PS> ' } } ",
                         "else { 'PS ' + $executionContext.SessionState.Path.CurrentLocation + '> ' }; ",
-                  "Write-Host \"`e]133;B`e\\\" -NoNewline; ",
+                  "Write-Host \"$($global:_esc)]133;B$($global:_esc)\\\" -NoNewline; ",
                   "$r ",
                 "}; ",
                 "Set-PSReadLineKeyHandler -Key Enter -ScriptBlock { ",
                   "$line = $null; $cursor = $null; ",
                   "[Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor); ",
                   "$line = ($line -replace '\\x1b', '') -replace ';', ','; ",
-                  "Write-Host \"`e]133;C;$line`e\\\" -NoNewline; ",
+                  "Write-Host \"$($global:_esc)]133;C;$line$($global:_esc)\\\" -NoNewline; ",
                   "[Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine() ",
                 "}"
             ).to_string(),
@@ -949,5 +950,15 @@ mod tests {
         assert!(cmd_str.contains("133;B"), "missing OSC 133;B (command start)");
         assert!(cmd_str.contains("133;C"), "missing OSC 133;C (exec start)");
         assert!(cmd_str.contains("133;D"), "missing OSC 133;D (exec end)");
+        // ESC 必须用 [char]27 构造：`e 转义仅 PowerShell 6+ 支持，
+        // 在 Windows PowerShell 5.1 上会被当字面文本打印出一行乱码。
+        assert!(
+            cmd_str.contains("[char]27"),
+            "ESC must be built via [char]27 for Windows PowerShell 5.1 compatibility"
+        );
+        assert!(
+            !cmd_str.contains("`e]133"),
+            "must not use the PS6+ only `e escape for OSC 133 (breaks on PowerShell 5.1)"
+        );
     }
 }
