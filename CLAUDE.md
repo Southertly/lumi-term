@@ -37,7 +37,15 @@ LumiTerm 是一个基于 **Tauri + Vue 3 + xterm.js** 的 Windows 终端应用�
 - `src-tauri/src/commands/pty.rs`
   - Tauri 命令层
 - `src-tauri/src/lib.rs`
-  - 应用入口
+  - 应用入口（`main.rs` 仅调用 `lib.rs::run`）
+
+### 其他子系统（命令可视化之外）
+除终端/Command Blocks 主线外，仓库还包含以下并行子系统，改动前先定位归属：
+- **多标签 / 分屏**：`components/TabBar.vue`、`TerminalTab.vue`、`SplitPane.vue`，状态在 `stores/terminalStore.ts`
+- **文件树 / 编辑器**：`components/SidebarPanel.vue`、`FileTreeNode.vue`、`FileEditorPane.vue`，状态在 `stores/editorStore.ts`
+- **主题系统**：`themes/`（`builtin.ts` + `warp-imported.ts` 由脚本生成），状态在 `stores/themeStore.ts`；窗口为无边框透明（`tauri.conf.json`: `decorations:false` / `transparent:true`），主题需兼容玻璃效果
+- **字体 / 快捷键**：`stores/fontStore.ts`、`stores/shortcutsStore.ts`
+- **通用 UI**：`components/Toast.vue`、`ConfirmDialog.vue` 及对应 `utils/toast.ts`、`utils/confirm.ts`
 
 ## 3. 开发命令（默认用 RTK）
 
@@ -47,18 +55,29 @@ LumiTerm 是一个基于 **Tauri + Vue 3 + xterm.js** 的 Windows 终端应用�
 # 安装依赖
 rtk npx pnpm install
 
-# 启动开发
+# 启动开发（Tauri 会先跑 npm run dev 起 vite:1420，再拉起 Rust 壳）
 rtk npx pnpm tauri dev
 
-# 前端测试（重点）
+# 前端测试（命令可视化重点子集）
 rtk npx vitest run src/utils/oscParser.test.ts src/stores/commandBlockStore.test.ts
 
-# Rust 测试（示例）
+# 前端全部测试
+rtk npx vitest run
+
+# 类型检查门禁（无 ESLint；build 前会跑 vue-tsc --noEmit）
+rtk npx pnpm build      # == vue-tsc --noEmit && vite build
+
+# Rust 测试（示例，crate 名为 lumi-term）
 rtk cargo test -p lumi-term powershell_args_include_osc133_prompt_hook
 
-# 构建
+# 重新导入 Warp 主题（生成 src/themes/warp-imported.ts，勿手改该文件）
+rtk npm run import-themes
+
+# 构建安装包
 rtk npx pnpm tauri build
 ```
+
+> 注：无独立 lint 步骤，类型安全靠 `vue-tsc --noEmit`（即 `pnpm build` 的前半段）保证。测试框架为 Vitest（jsdom），非 Jest。
 
 ## 4. 运行机制（精简架构）
 
