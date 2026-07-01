@@ -53,31 +53,33 @@ LumiTerm 是一个基于 **Tauri + Vue 3 + xterm.js** 的 Windows 终端应用�
 
 ```bash
 # 安装依赖
-rtk npx pnpm install
+rtk pnpm install
 
 # 启动开发（Tauri 会先跑 npm run dev 起 vite:1420，再拉起 Rust 壳）
-rtk npx pnpm tauri dev
+rtk pnpm tauri dev
 
 # 前端测试（命令可视化重点子集）
-rtk npx vitest run src/utils/oscParser.test.ts src/stores/commandBlockStore.test.ts
+rtk pnpm exec vitest run src/utils/oscParser.test.ts src/stores/commandBlockStore.test.ts
 
 # 前端全部测试
-rtk npx vitest run
+rtk pnpm exec vitest run
 
 # 类型检查门禁（无 ESLint；build 前会跑 vue-tsc --noEmit）
-rtk npx pnpm build      # == vue-tsc --noEmit && vite build
+rtk pnpm build      # == vue-tsc --noEmit && vite build
 
 # Rust 测试（示例，crate 名为 lumi-term）
 rtk cargo test -p lumi-term powershell_args_include_osc133_prompt_hook
 
 # 重新导入 Warp 主题（生成 src/themes/warp-imported.ts，勿手改该文件）
-rtk npm run import-themes
+rtk pnpm run import-themes
 
 # 构建安装包
-rtk npx pnpm tauri build
+rtk pnpm tauri build
 ```
 
 > 注：无独立 lint 步骤，类型安全靠 `vue-tsc --noEmit`（即 `pnpm build` 的前半段）保证。测试框架为 Vitest（jsdom），非 Jest。
+>
+> ⚠️ pnpm 已全局安装（见 PATH），直接用 `pnpm ...`，**不要写 `npx pnpm ...`**——npx 会把 `pnpm` 当成 npm script 去找，报 `Missing script: "pnpm"` 导致命令失败。
 
 ## 4. 运行机制（精简架构）
 
